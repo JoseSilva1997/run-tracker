@@ -1,4 +1,4 @@
-package com.example.coursework.ui
+package com.example.coursework
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
