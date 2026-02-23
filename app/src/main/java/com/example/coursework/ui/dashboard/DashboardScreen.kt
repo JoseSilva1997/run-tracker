@@ -1,6 +1,5 @@
 package com.example.coursework.ui.dashboard
 
-import android.widget.Space
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -12,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -49,7 +47,6 @@ import androidx.compose.ui.unit.dp
 import com.example.coursework.ui.theme.BgDark
 import com.example.coursework.ui.theme.BtnPrimary
 import com.example.coursework.ui.theme.BtnPrimaryBlue
-import com.example.coursework.ui.theme.StatsCardBg
 import com.example.coursework.ui.theme.TextPrimary
 import com.example.coursework.ui.theme.TextSecondary
 
@@ -58,12 +55,12 @@ import com.example.coursework.ui.theme.TextSecondary
 fun DashboardScreen(
     filterOptions: List<String>,
     startRunOptions: List<String>,
+    selectedRunType: String,
     onStartRunSelected: (String) -> Unit,
     onFilterSelected: (String) -> Unit,
+    onRunTypeSelected: (String) -> Unit,
     onAddNewRunType: () -> Unit
 ) {
-    var selectedRunType by remember { mutableStateOf(startRunOptions.firstOrNull().orEmpty()) }
-
     Scaffold (
         containerColor = BgDark,
         bottomBar = {
@@ -83,7 +80,7 @@ fun DashboardScreen(
                     selectedOption = selectedRunType,
                     width = 0.4f,
                     onSelected = { selected ->
-                            selectedRunType = selected
+                        onRunTypeSelected(selected)
                     }
                 )
 
@@ -271,13 +268,15 @@ private fun MetricCard(title: String, value: String, modifier: Modifier = Modifi
 @Preview(showBackground = true, backgroundColor = 0xFF121212)
 @Composable
 fun DashboardScreenPreview() {
-    val filterOptions = listOf("All", "5K", "10K", "Half Marathon")
-    val startRunOptions = listOf("5K", "10K", "Half Marathon", "Add new")
+    val filterOptions = listOf("All", "5K", "10K")
+    val startRunOptions = listOf("5K", "10K")
     DashboardScreen(
         filterOptions = filterOptions,
         startRunOptions = startRunOptions,
+        selectedRunType = "5K",
         onStartRunSelected = {},
         onFilterSelected = {},
+        onRunTypeSelected = {},
         onAddNewRunType = {}
     )
 }

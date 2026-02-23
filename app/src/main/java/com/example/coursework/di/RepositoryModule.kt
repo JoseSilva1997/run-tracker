@@ -2,6 +2,8 @@ package com.example.coursework.di
 
 import com.example.coursework.domain.repository.RunTypeRepository
 import com.example.coursework.domain.repository.RunTypeRepositoryImpl
+import com.example.coursework.domain.repository.UserPreferencesRepository
+import com.example.coursework.domain.repository.UserPreferencesRepositoryImpl
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -15,4 +17,9 @@ abstract class RepositoryModule {
     abstract fun bindRunTypeRepository(
         impl: RunTypeRepositoryImpl
     ): RunTypeRepository
+
+    @Binds
+    abstract fun bindUserPreferencesRepository(
+        impl: UserPreferencesRepositoryImpl
+    ): UserPreferencesRepository
 }

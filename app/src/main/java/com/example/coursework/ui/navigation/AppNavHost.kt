@@ -18,15 +18,18 @@ fun AppNavHost() {
         composable("dashboard") {
             val vm: DashboardViewModel = hiltViewModel()
             val runTypes by vm.runTypes.collectAsState()
+            val selectedRunType by vm.selectedRunType.collectAsState()
 
-            val filterOptions = listOf("All") + runTypes.map {it.name}
-            val startRunOptions = runTypes.map { it.name } + "Add new"
+            val filterOptions = listOf("All") + runTypes.map { it.name }
+            val startRunOptions = runTypes.map { it.name }
 
             DashboardScreen(
                 filterOptions = filterOptions,
                 startRunOptions = startRunOptions,
+                selectedRunType = selectedRunType,
                 onStartRunSelected = {},
                 onFilterSelected = {},
+                onRunTypeSelected = { vm.onRunTypeSelected(it) },
                 onAddNewRunType = {}
             )
         }
