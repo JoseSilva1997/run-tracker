@@ -8,6 +8,7 @@ private val DarkColors = darkColorScheme(
     background = BgDark,
     surface = BgDark,
     primary = BtnPrimary,
+    secondary = BtnPrimaryBlue,
     onPrimary = TextPrimary,
     onSecondary = TextPrimary,
     onSurface = TextSecondary

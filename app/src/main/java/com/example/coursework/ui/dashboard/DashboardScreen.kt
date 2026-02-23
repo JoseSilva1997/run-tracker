@@ -1,16 +1,22 @@
 package com.example.coursework.ui.dashboard
 
+import android.widget.Space
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -19,6 +25,9 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -28,8 +37,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.modifier.modifierLocalConsumer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
@@ -37,6 +48,7 @@ import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import com.example.coursework.ui.theme.BgDark
 import com.example.coursework.ui.theme.BtnPrimary
+import com.example.coursework.ui.theme.BtnPrimaryBlue
 import com.example.coursework.ui.theme.StatsCardBg
 import com.example.coursework.ui.theme.TextPrimary
 import com.example.coursework.ui.theme.TextSecondary
@@ -71,11 +83,7 @@ fun DashboardScreen(
                     selectedOption = selectedRunType,
                     width = 0.4f,
                     onSelected = { selected ->
-                        if (selected == "Add new") {
-                            onAddNewRunType()
-                        } else {
                             selectedRunType = selected
-                        }
                     }
                 )
 
@@ -110,19 +118,40 @@ fun DashboardScreen(
             Spacer(Modifier.height(6.dp))
             var selectedFilter by remember { mutableStateOf(filterOptions.firstOrNull().orEmpty()) }
 
-
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
             RunTypeDropdown(
                 options = filterOptions,
                 selectedOption = selectedFilter,
-                width = 0.25f,
+                width = 0.3f,
                 onSelected = {
                     selectedFilter = it
                     onFilterSelected(it)
                 }
             )
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.width(8.dp))
 
+            IconButton(
+                onClick = { onAddNewRunType() },
+                modifier = Modifier
+                    .size(40.dp),
+                colors = IconButtonDefaults.iconButtonColors(
+                    containerColor = BtnPrimaryBlue,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Add new run type"
+                )
+            }
+        }
+
+            Spacer(Modifier.height(16.dp))
             Text(
                 text = "Metrics",
                 color = TextPrimary,
