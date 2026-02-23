@@ -1,5 +1,6 @@
 package com.example.coursework.ui.dashboard
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -28,10 +29,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
-import com.example.coursework.R
 import com.example.coursework.ui.theme.BgDark
 import com.example.coursework.ui.theme.BtnPrimary
 import com.example.coursework.ui.theme.StatsCardBg
@@ -215,11 +218,18 @@ private fun MetricsGrid() {
 
 @Composable
 private fun MetricCard(title: String, value: String, modifier: Modifier = Modifier) {
+    val borderColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.25f)
 
     Card(
-        modifier = modifier,
+        modifier = modifier
+            .border(
+                width = 1.dp,
+                color = borderColor,
+                shape = RoundedCornerShape(12.dp)
+            ),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = StatsCardBg)
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(title, color = TextPrimary)
@@ -228,3 +238,78 @@ private fun MetricCard(title: String, value: String, modifier: Modifier = Modifi
         }
     }
 }
+
+@Preview(showBackground = true, backgroundColor = 0xFF121212)
+@Composable
+fun DashboardScreenPreview() {
+    val filterOptions = listOf("All", "5K", "10K", "Half Marathon")
+    val startRunOptions = listOf("5K", "10K", "Half Marathon", "Add new")
+    DashboardScreen(
+        filterOptions = filterOptions,
+        startRunOptions = startRunOptions,
+        onStartRunSelected = {},
+        onFilterSelected = {},
+        onAddNewRunType = {}
+    )
+}
+
+class ExpandedStateProvider : PreviewParameterProvider<Boolean> {
+    override val values = sequenceOf(false, true)
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview(showBackground = true, backgroundColor = 0xFF121212)
+@Composable
+fun RunTypeDropdownPreview(
+    @PreviewParameter(ExpandedStateProvider::class)
+    isExpanded: Boolean
+) {
+    // We need to recompose the preview when the state changes,
+    // so we use a mutable state that is initialized by the preview parameter.
+    var expanded by remember { mutableStateOf(isExpanded) }
+    var selectedOption by remember { mutableStateOf("5K") }
+    val options = listOf("5K", "10K", "Half Marathon")
+
+    // The ExposedDropdownMenuBox needs to be re-drawn when 'expanded' changes
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded }
+    ) {
+        // Simplified version of the dropdown for preview purposes
+        OutlinedTextField(
+            modifier = Modifier.menuAnchor(),
+            readOnly = true,
+            value = selectedOption,
+            onValueChange = {},
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option) },
+                    onClick = {
+                        selectedOption = option
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Preview
+@Composable
+private fun MetricsGridPreview() {
+    MetricsGrid()
+}
+
+@Preview
+@Composable
+private fun MetricCardPreview() {
+    MetricCard(title ="Avg Pace", value = "6:15  /km")
+}
+
+
