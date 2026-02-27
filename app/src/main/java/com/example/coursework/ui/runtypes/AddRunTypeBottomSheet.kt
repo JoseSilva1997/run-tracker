@@ -29,6 +29,8 @@ fun AddRunTypeBottomSheet (
 ) {
     var name by remember { mutableStateOf("") }
     var distance by remember { mutableStateOf("") }
+    var nameError by remember { mutableStateOf<String?>(null) }
+    var distanceError by remember { mutableStateOf<String?>(null) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss
@@ -44,9 +46,25 @@ fun AddRunTypeBottomSheet (
 
             OutlinedTextField(
                 value = name,
-                onValueChange = { name = it },
+                onValueChange = { 
+                    if (it.length <= 8) { // Prevent typing more than 8 chars
+                        name = it
+                        nameError = null // Clear error on typing
+                    }
+                },
                 label = { Text("Run Type name (e.g., 5K)") },
                 singleLine = true,
+                isError = nameError != null,
+                supportingText = {
+                    if (nameError != null) {
+                        Text(
+                            text = nameError!!,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    } else {
+                        Text("${name.length}/8")
+                    }
+                },
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -54,9 +72,21 @@ fun AddRunTypeBottomSheet (
 
             OutlinedTextField(
                 value = distance,
-                onValueChange = { distance = it },
+                onValueChange = { 
+                    distance = it
+                    distanceError = null // Clear error on typing
+                },
                 label = { Text("Target distance (meters)") },
                 singleLine = true,
+                isError = distanceError != null,
+                supportingText = {
+                    if (distanceError != null) {
+                        Text(
+                            text = distanceError!!,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth()
             )
@@ -65,15 +95,61 @@ fun AddRunTypeBottomSheet (
 
             Button(
                 onClick = {
-                    val distanceInput = distance.toIntOrNull()
-                    if (name.isNotBlank() && distanceInput != null && distanceInput > 0) {
-                        onSave(name, distanceInput)
+                    val trimmedName = name.trim()
+                    
+                    // We need to evaluate both to ensure both error states are updated
+                    // if both fields are invalid at the same time.
+                    val isNameValid = isValidName(trimmedName) { nameError = it }
+                    val isDistanceValid = isValidDistance(distance) { distanceError = it }
+
+                    if (isNameValid && isDistanceValid) {
+                        onSave(trimmedName, distance.toInt())
                         onDismiss()
                     }
-                }
+                },
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Save")
             }
+        }
+    }
+}
+
+private fun isValidName(trimmedName: String, onError: (String?) -> Unit): Boolean {
+    return when {
+        trimmedName.isEmpty() -> {
+            onError("Name cannot be empty")
+            false
+        }
+        trimmedName.length > 8 -> {
+            onError("Name must be 8 characters or less")
+            false
+        }
+        else -> {
+            onError(null)
+            true
+        }
+    }
+}
+
+private fun isValidDistance(distanceStr: String, onError: (String?) -> Unit): Boolean {
+    val distance = distanceStr.toIntOrNull()
+    return when {
+        distance == null -> {
+            onError("Please enter a valid number")
+            false
+        }
+        distance <= 0 -> {
+            onError("Distance must be greater than 0")
+            false
+        }
+        distance > 100000 -> { // Cap at 100km for sanity
+            onError("Distance is too large (max 100,000m)")
+            false
+        }
+        else -> {
+            onError(null)
+            true
         }
     }
 }
