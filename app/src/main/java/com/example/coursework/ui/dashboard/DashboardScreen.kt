@@ -42,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.coursework.ui.runtypes.AddRunTypeBottomSheet
 import com.example.coursework.ui.theme.BgDark
 import com.example.coursework.ui.theme.BtnPrimary
@@ -59,7 +60,7 @@ fun DashboardScreen(
     onStartRunSelected: (String) -> Unit,
     onFilterSelected: (String) -> Unit,
     onRunTypeSelected: (String) -> Unit,
-    onAddNewRunType: (String, String) -> Unit
+    onAddNewRunType: (String, Int) -> Unit
 ) {
     // State for the "Start Run" bottom sheet
     val addRunTypeSheetState = rememberModalBottomSheetState()
@@ -169,11 +170,6 @@ fun DashboardScreen(
             AddRunTypeBottomSheet(
                 onSave = { name, distance ->
                     onAddNewRunType(name, distance)
-                    scope.launch { addRunTypeSheetState.hide() }.invokeOnCompletion {
-                        if (!addRunTypeSheetState.isVisible) {
-                            showAddRunTypeSheet = false
-                        }
-                    }
                 },
                 onDismiss = {
                     showAddRunTypeSheet = false
@@ -205,7 +201,7 @@ private fun RunTypeDropdown(
             .fillMaxWidth(width)
     ) {
         OutlinedTextField(
-            value = selectedOption,
+            value = if (selectedOption != "") selectedOption else "No types",
             onValueChange = {},
             readOnly = true,
             modifier = Modifier

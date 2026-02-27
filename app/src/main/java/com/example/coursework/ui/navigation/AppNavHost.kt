@@ -16,6 +16,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.coursework.ui.dashboard.DashboardScreen
 import com.example.coursework.ui.dashboard.DashboardViewModel
+import com.example.coursework.ui.runtypes.AddRunTypeViewModel
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -36,6 +37,7 @@ fun AppNavHost() {
     ) {
         composable("dashboard") {
             val vm: DashboardViewModel = hiltViewModel()
+            val addRunTypeVm: AddRunTypeViewModel = hiltViewModel()
             val runTypes by vm.runTypes.collectAsState()
             val selectedRunType by vm.selectedRunType.collectAsState()
 
@@ -49,7 +51,9 @@ fun AppNavHost() {
                 onStartRunSelected = {},
                 onFilterSelected = {},
                 onRunTypeSelected = { vm.onRunTypeSelected(it) },
-                onAddNewRunType = { _, _ -> }
+                onAddNewRunType = { name, distance -> 
+                    addRunTypeVm.addRunType(name, distance)
+                }
             )
         }
     }

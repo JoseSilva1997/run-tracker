@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.dp
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddRunTypeBottomSheet (
-    onSave: (name: String, distance: String) -> Unit,
+    onSave: (name: String, distance: Int) -> Unit,
     onDismiss: () -> Unit
 ) {
     var name by remember { mutableStateOf("") }
@@ -39,6 +39,9 @@ fun AddRunTypeBottomSheet (
                 .padding(20.dp)
         ) {
             Text("Add Run Type", style = MaterialTheme.typography.titleMedium)
+
+            Spacer(Modifier.height(8.dp))
+
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
@@ -61,8 +64,13 @@ fun AddRunTypeBottomSheet (
             Spacer(Modifier.height(12.dp))
 
             Button(
-                onClick = { onSave(name, distance) },
-                modifier = Modifier.fillMaxWidth()
+                onClick = {
+                    val distanceInput = distance.toIntOrNull()
+                    if (name.isNotBlank() && distanceInput != null && distanceInput > 0) {
+                        onSave(name, distanceInput)
+                        onDismiss()
+                    }
+                }
             ) {
                 Text("Save")
             }
