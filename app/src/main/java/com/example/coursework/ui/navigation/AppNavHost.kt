@@ -32,7 +32,7 @@ fun AppNavHost() {
         startDestination = "dashboard",
         modifier = Modifier
             .background(BgDark)
-            .padding(vertical = 16.dp)
+            .padding(top = 16.dp)
             .safeDrawingPadding()
     ) {
         composable("dashboard") {

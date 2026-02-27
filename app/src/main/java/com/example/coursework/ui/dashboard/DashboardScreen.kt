@@ -1,6 +1,7 @@
 package com.example.coursework.ui.dashboard
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,58 +13,63 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.DirectionsRun
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.DirectionsRun
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.coursework.ui.runtypes.AddRunTypeBottomSheet
 import com.example.coursework.ui.theme.BgDark
 import com.example.coursework.ui.theme.BtnPrimary
 import com.example.coursework.ui.theme.BtnPrimaryBlue
 import com.example.coursework.ui.theme.TextPrimary
 import com.example.coursework.ui.theme.TextSecondary
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,71 +82,26 @@ fun DashboardScreen(
     onRunTypeSelected: (String) -> Unit,
     onAddNewRunType: (String, Int) -> Unit
 ) {
-    // State for the "Start Run" bottom sheet
-    val addRunTypeSheetState = rememberModalBottomSheetState()
     var showAddRunTypeSheet by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
+    var showRunTypePicker by remember { mutableStateOf(false) }
+    var selectedFilter by remember { mutableStateOf(filterOptions.firstOrNull().orEmpty()) }
 
+    LaunchedEffect(filterOptions) {
+        if (selectedFilter !in filterOptions) {
+            selectedFilter = filterOptions.firstOrNull().orEmpty()
+            onFilterSelected(selectedFilter)
+        }
+    }
 
     Scaffold (
         containerColor = BgDark,
         bottomBar = {
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .shadow(elevation = 16.dp, shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)),
-                color = MaterialTheme.colorScheme.surface,
-                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
-            ) {
-                Column (
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp)
-                ) {
-                    Text (
-                        text = "Ready for a run?",
-                        color = TextPrimary,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(Modifier.height(12.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        RunTypeDropdown(
-                            options = startRunOptions,
-                            selectedOption = selectedRunType,
-                            width = 0.5f,
-                            onSelected = {
-                                onRunTypeSelected(it)
-                            }
-                        )
-
-                        Spacer(Modifier.width(16.dp))
-
-                        Button(
-                            onClick = { onStartRunSelected(selectedRunType) },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(56.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = BtnPrimary)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.PlayArrow,
-                                contentDescription = "Start",
-                                tint = TextPrimary,
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text("Start", color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-            }
+            StartRunDock(
+                selectedRunType = selectedRunType,
+                hasRunTypes = startRunOptions.isNotEmpty(),
+                onSelectRunType = { showRunTypePicker = true },
+                onStartRun = { onStartRunSelected(selectedRunType) }
+            )
         }
     ) { padding ->
         Column(
@@ -159,21 +120,17 @@ fun DashboardScreen(
                 fontWeight = FontWeight.ExtraBold
             )
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(16.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.Bottom,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column {
-                    Text(text = "Filter by run type", color = TextSecondary, style = MaterialTheme.typography.bodyMedium)
-                    Spacer(Modifier.height(8.dp))
-                    var selectedFilter by remember { mutableStateOf(filterOptions.firstOrNull().orEmpty()) }
-                    RunTypeDropdown(
+                    FilterChipsRow(
                         options = filterOptions,
-                        selectedOption = selectedFilter,
-                        width = 0.4f,
+                        selectedFilter = selectedFilter,
                         onSelected = {
                             selectedFilter = it
                             onFilterSelected(it)
@@ -181,13 +138,12 @@ fun DashboardScreen(
                     )
                 }
 
-                IconButton(
+                FilledIconButton(
                     onClick = { showAddRunTypeSheet = true },
                     modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(BtnPrimaryBlue),
-                    colors = IconButtonDefaults.iconButtonColors(
+                        .size(46.dp),
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = BtnPrimaryBlue,
                         contentColor = MaterialTheme.colorScheme.onPrimary
                     )
                 ) {
@@ -199,7 +155,7 @@ fun DashboardScreen(
                 }
             }
 
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(16.dp))
             
             Text(
                 text = "Your Progress",
@@ -225,65 +181,202 @@ fun DashboardScreen(
                 },
             )
         }
+        if (showRunTypePicker) {
+            RunTypePickerBottomSheet(
+                options = startRunOptions,
+                selectedRunType = selectedRunType,
+                onRunTypeSelected = {
+                    onRunTypeSelected(it)
+                    showRunTypePicker = false
+                },
+                onAddRunType = {
+                    showRunTypePicker = false
+                    showAddRunTypeSheet = true
+                },
+                onDismiss = { showRunTypePicker = false }
+            )
+        }
+    }
+}
+
+@Composable
+private fun FilterChipsRow(
+    options: List<String>,
+    selectedFilter: String,
+    onSelected: (String) -> Unit
+) {
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = Modifier
+            .fillMaxWidth(0.8f)
+    ) {
+        items(options) { option ->
+            FilterChip(
+                selected = selectedFilter == option,
+                onClick = { onSelected(option) },
+                label = { Text(option) },
+                leadingIcon = if (selectedFilter == option) {
+                    { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                } else {
+                    null
+                },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = BtnPrimaryBlue.copy(alpha = 0.18f),
+                    selectedLabelColor = TextPrimary,
+                    selectedLeadingIconColor = BtnPrimaryBlue,
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                    labelColor = TextSecondary
+                )
+            )
+        }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun RunTypeDropdown(
+private fun RunTypePickerBottomSheet(
     options: List<String>,
-    selectedOption: String,
-    onSelected: (String) -> Unit,
-    width: Float
+    selectedRunType: String,
+    onRunTypeSelected: (String) -> Unit,
+    onAddRunType: () -> Unit,
+    onDismiss: () -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    val borderColor = TextSecondary.copy(alpha = 0.25f)
-    val bgColor = MaterialTheme.colorScheme.background
-    val textPrimary = MaterialTheme.colorScheme.onPrimary
-
-
-
-    ExposedDropdownMenuBox (
-        expanded = expanded,
-        onExpandedChange = { expanded = !expanded },
-        modifier = Modifier
-            .fillMaxWidth(width)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss
     ) {
-        OutlinedTextField(
-            value = if (selectedOption != "") selectedOption else "No types",
-            onValueChange = {},
-            readOnly = true,
+        Column(
             modifier = Modifier
-                .menuAnchor()
-                .fillMaxWidth(),
-            trailingIcon = {
-                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-            },
-            shape = RoundedCornerShape(12.dp),
-            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(
-                focusedContainerColor = bgColor,
-                unfocusedContainerColor = bgColor,
-                focusedBorderColor = borderColor,
-                unfocusedBorderColor = borderColor,
-                focusedTextColor = textPrimary,
-                unfocusedTextColor = textPrimary,
-                focusedTrailingIconColor = textPrimary,
-                unfocusedTrailingIconColor = textPrimary
-            )
-        )
-
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 12.dp)
         ) {
-            options.forEach { label ->
-                DropdownMenuItem(
-                    text = { Text(label, style = MaterialTheme.typography.bodySmall) },
-                    onClick = {
-                        onSelected(label)
-                        expanded = false
-                    }
+            Text(
+                text = "Choose run type",
+                style = MaterialTheme.typography.titleLarge,
+                color = TextPrimary,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.height(12.dp))
+
+            if (options.isEmpty()) {
+                Text(
+                    text = "Create a run type to start tracking.",
+                    color = TextSecondary,
+                    style = MaterialTheme.typography.bodyMedium
                 )
+                Spacer(Modifier.height(8.dp))
+            } else {
+                options.forEach { option ->
+                    ListItem(
+                        headlineContent = { Text(option) },
+                        leadingContent = {
+                            RadioButton(
+                                selected = option == selectedRunType,
+                                onClick = null
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = LocalIndication.current
+                            ) { onRunTypeSelected(option) }
+                    )
+                }
+            }
+
+            OutlinedButton(
+                onClick = onAddRunType,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp)
+            ) {
+                Icon(Icons.Default.Add, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Add new run type")
+            }
+            Spacer(Modifier.height(16.dp))
+        }
+    }
+}
+
+@Composable
+private fun StartRunDock(
+    selectedRunType: String,
+    hasRunTypes: Boolean,
+    onSelectRunType: () -> Unit,
+    onStartRun: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(elevation = 16.dp, shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)),
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.surface,
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                        )
+                    )
+                )
+                .padding(20.dp)
+        ) {
+            Column {
+                Text(
+                    text = "Start your next run",
+                    color = TextPrimary,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(Modifier.height(10.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedButton(
+                        onClick = onSelectRunType,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(58.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        enabled = hasRunTypes
+                    ) {
+                        Icon(Icons.Default.LocationOn, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = selectedRunType.ifBlank { "Choose" },
+                            modifier = Modifier.weight(1f),
+                            maxLines = 1
+                        )
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
+                    }
+
+                    Button(
+                        onClick = onStartRun,
+                        enabled = hasRunTypes && selectedRunType.isNotBlank(),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(58.dp),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = BtnPrimary)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = "Start run",
+                            tint = TextPrimary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text("Start Run", color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
             }
         }
     }
@@ -312,14 +405,14 @@ internal fun MetricsGrid() {
             MetricCard(
                 title = "Weekly Distance", 
                 value = "-- km", 
-                icon = Icons.Default.DirectionsRun,
+                icon = Icons.AutoMirrored.Filled.DirectionsRun,
                 modifier = Modifier.weight(1f)
             )
             Spacer(Modifier.width(16.dp))
             MetricCard(
                 title = "Recent Trend", 
                 value = "--", 
-                icon = Icons.Default.TrendingUp,
+                icon = Icons.AutoMirrored.Filled.TrendingUp,
                 modifier = Modifier.weight(1f)
             )
         }
