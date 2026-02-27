@@ -28,7 +28,7 @@ fun DashboardScreenPreview() {
         onStartRunSelected = {},
         onFilterSelected = {},
         onRunTypeSelected = {},
-        onAddNewRunType = {}
+        onAddNewRunType = { _, _ -> }
     )
 }
 

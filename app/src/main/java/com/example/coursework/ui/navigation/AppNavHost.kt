@@ -1,5 +1,6 @@
 package com.example.coursework.ui.navigation
 
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -9,12 +10,17 @@ import androidx.navigation.compose.rememberNavController
 import com.example.coursework.ui.dashboard.DashboardScreen
 import com.example.coursework.ui.dashboard.DashboardViewModel
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
 
 
 @Composable
 fun AppNavHost() {
     val navController = rememberNavController()
-    NavHost(navController, startDestination = "dashboard") {
+    NavHost(
+        navController,
+        startDestination = "dashboard",
+        modifier = Modifier.safeDrawingPadding()
+    ) {
         composable("dashboard") {
             val vm: DashboardViewModel = hiltViewModel()
             val runTypes by vm.runTypes.collectAsState()
@@ -30,7 +36,7 @@ fun AppNavHost() {
                 onStartRunSelected = {},
                 onFilterSelected = {},
                 onRunTypeSelected = { vm.onRunTypeSelected(it) },
-                onAddNewRunType = {}
+                onAddNewRunType = { _, _ -> }
             )
         }
     }

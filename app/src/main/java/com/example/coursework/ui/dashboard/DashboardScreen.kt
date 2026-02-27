@@ -30,21 +30,25 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.coursework.ui.runtypes.AddRunTypeBottomSheet
 import com.example.coursework.ui.theme.BgDark
 import com.example.coursework.ui.theme.BtnPrimary
 import com.example.coursework.ui.theme.BtnPrimaryBlue
 import com.example.coursework.ui.theme.TextPrimary
 import com.example.coursework.ui.theme.TextSecondary
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,8 +59,14 @@ fun DashboardScreen(
     onStartRunSelected: (String) -> Unit,
     onFilterSelected: (String) -> Unit,
     onRunTypeSelected: (String) -> Unit,
-    onAddNewRunType: () -> Unit
+    onAddNewRunType: (String, String) -> Unit
 ) {
+    // State for the "Start Run" bottom sheet
+    val addRunTypeSheetState = rememberModalBottomSheetState()
+    var showAddRunTypeSheet by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
+
     Scaffold (
         containerColor = BgDark,
         bottomBar = {
@@ -129,7 +139,7 @@ fun DashboardScreen(
             Spacer(Modifier.width(8.dp))
 
             IconButton(
-                onClick = { onAddNewRunType() },
+                onClick = { showAddRunTypeSheet = true },
                 modifier = Modifier
                     .size(40.dp),
                 colors = IconButtonDefaults.iconButtonColors(
@@ -156,7 +166,21 @@ fun DashboardScreen(
 
             MetricsGrid()
         }
-
+        if (showAddRunTypeSheet) {
+            AddRunTypeBottomSheet(
+                onSave = { name, distance ->
+                    onAddNewRunType(name, distance)
+                    scope.launch { addRunTypeSheetState.hide() }.invokeOnCompletion {
+                        if (!addRunTypeSheetState.isVisible) {
+                            showAddRunTypeSheet = false
+                        }
+                    }
+                },
+                onDismiss = {
+                    showAddRunTypeSheet = false
+                },
+            )
+        }
     }
 }
 
