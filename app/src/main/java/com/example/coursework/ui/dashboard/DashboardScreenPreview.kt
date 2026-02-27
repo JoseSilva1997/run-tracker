@@ -1,5 +1,6 @@
 package com.example.coursework.ui.dashboard
 
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -15,7 +16,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
-import androidx.lifecycle.ViewModel
 
 @Preview(showBackground = true, backgroundColor = 0xFF121212)
 @Composable
@@ -89,5 +89,5 @@ internal fun MetricsGridPreview() {
 @Preview
 @Composable
 internal fun MetricCardPreview() {
-    MetricCard(title ="Avg Pace", value = "6:15  /km")
+    MetricCard(title ="Avg Pace", value = "6:15  /km", icon = androidx.compose.material.icons.Icons.Default.Speed)
 }
