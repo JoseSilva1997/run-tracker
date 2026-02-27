@@ -38,11 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.modifier.modifierLocalConsumer
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.tooling.preview.PreviewParameter
-import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import com.example.coursework.ui.theme.BgDark
 import com.example.coursework.ui.theme.BtnPrimary
@@ -79,8 +75,8 @@ fun DashboardScreen(
                     options = startRunOptions,
                     selectedOption = selectedRunType,
                     width = 0.4f,
-                    onSelected = { selected ->
-                        onRunTypeSelected(selected)
+                    onSelected = {
+                        onRunTypeSelected(it)
                     }
                 )
 
@@ -226,7 +222,7 @@ private fun RunTypeDropdown(
 }
 
 @Composable
-private fun MetricsGrid() {
+internal fun MetricsGrid() {
     Column {
         Row(Modifier.fillMaxWidth()) {
             MetricCard("Avg Pace", "--:-- /km", Modifier.weight(1f))
@@ -243,7 +239,7 @@ private fun MetricsGrid() {
 }
 
 @Composable
-private fun MetricCard(title: String, value: String, modifier: Modifier = Modifier) {
+internal fun MetricCard(title: String, value: String, modifier: Modifier = Modifier) {
     val borderColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.25f)
 
     Card(
@@ -264,80 +260,3 @@ private fun MetricCard(title: String, value: String, modifier: Modifier = Modifi
         }
     }
 }
-
-@Preview(showBackground = true, backgroundColor = 0xFF121212)
-@Composable
-fun DashboardScreenPreview() {
-    val filterOptions = listOf("All", "5K", "10K")
-    val startRunOptions = listOf("5K", "10K")
-    DashboardScreen(
-        filterOptions = filterOptions,
-        startRunOptions = startRunOptions,
-        selectedRunType = "5K",
-        onStartRunSelected = {},
-        onFilterSelected = {},
-        onRunTypeSelected = {},
-        onAddNewRunType = {}
-    )
-}
-
-class ExpandedStateProvider : PreviewParameterProvider<Boolean> {
-    override val values = sequenceOf(false, true)
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Preview(showBackground = true, backgroundColor = 0xFF121212)
-@Composable
-fun RunTypeDropdownPreview(
-    @PreviewParameter(ExpandedStateProvider::class)
-    isExpanded: Boolean
-) {
-    // We need to recompose the preview when the state changes,
-    // so we use a mutable state that is initialized by the preview parameter.
-    var expanded by remember { mutableStateOf(isExpanded) }
-    var selectedOption by remember { mutableStateOf("5K") }
-    val options = listOf("5K", "10K", "Half Marathon")
-
-    // The ExposedDropdownMenuBox needs to be re-drawn when 'expanded' changes
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = !expanded }
-    ) {
-        // Simplified version of the dropdown for preview purposes
-        OutlinedTextField(
-            modifier = Modifier.menuAnchor(),
-            readOnly = true,
-            value = selectedOption,
-            onValueChange = {},
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-        )
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-            options.forEach { option ->
-                DropdownMenuItem(
-                    text = { Text(option) },
-                    onClick = {
-                        selectedOption = option
-                        expanded = false
-                    }
-                )
-            }
-        }
-    }
-}
-
-@Preview
-@Composable
-private fun MetricsGridPreview() {
-    MetricsGrid()
-}
-
-@Preview
-@Composable
-private fun MetricCardPreview() {
-    MetricCard(title ="Avg Pace", value = "6:15  /km")
-}
-
-
