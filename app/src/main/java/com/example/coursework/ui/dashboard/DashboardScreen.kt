@@ -68,7 +68,6 @@ fun DashboardScreen(
 
 
     Scaffold (
-        containerColor = BgDark,
         bottomBar = {
             Column (
                 modifier = Modifier

@@ -1,6 +1,13 @@
 package com.example.coursework.ui.navigation
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -11,6 +18,9 @@ import com.example.coursework.ui.dashboard.DashboardScreen
 import com.example.coursework.ui.dashboard.DashboardViewModel
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import com.example.coursework.ui.theme.BgDark
 
 
 @Composable
@@ -19,7 +29,10 @@ fun AppNavHost() {
     NavHost(
         navController,
         startDestination = "dashboard",
-        modifier = Modifier.safeDrawingPadding()
+        modifier = Modifier
+            .background(BgDark)
+            .padding(vertical = 16.dp)
+            .safeDrawingPadding()
     ) {
         composable("dashboard") {
             val vm: DashboardViewModel = hiltViewModel()
