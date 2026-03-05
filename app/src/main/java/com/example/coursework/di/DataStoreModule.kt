@@ -14,14 +14,18 @@ import javax.inject.Singleton
 
 private const val USER_PREFERENCES_NAME = "user_preferences"
 
+// Hilt module that provides app-wide DataStore dependencies.
 @Module
 @InstallIn(SingletonComponent::class)
 object DataStoreModule {
 
+    // Creates a single Preferences DataStore instance for the whole app.
+    // DataStore should be a singleton to avoid multiple instances writing the same file.
     @Provides
     @Singleton
     fun provideDataStore(@ApplicationContext context: Context): DataStore<Preferences> {
         return PreferenceDataStoreFactory.create(
+            // Backs DataStore with /files/datastore/user_preferences.preferences_pb.
             produceFile = { context.preferencesDataStoreFile(USER_PREFERENCES_NAME) }
         )
     }
