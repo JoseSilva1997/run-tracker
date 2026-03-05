@@ -71,6 +71,7 @@ import com.example.coursework.ui.theme.BtnPrimaryBlue
 import com.example.coursework.ui.theme.TextPrimary
 import com.example.coursework.ui.theme.TextSecondary
 
+// Dashboard entry composable: shows metric cards, run type filtering, and start-run actions.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
@@ -86,6 +87,7 @@ fun DashboardScreen(
     var showRunTypePicker by remember { mutableStateOf(false) }
     var selectedFilter by remember { mutableStateOf(filterOptions.firstOrNull().orEmpty()) }
 
+    // Keeps local selection valid when filter options change from ViewModel state updates.
     LaunchedEffect(filterOptions) {
         if (selectedFilter !in filterOptions) {
             selectedFilter = filterOptions.firstOrNull().orEmpty()
@@ -171,6 +173,7 @@ fun DashboardScreen(
             // Add some extra padding at the bottom so content isn't hidden behind the bottom bar
             Spacer(Modifier.height(32.dp))
         }
+        // Bottom sheet for creating a new run type from dashboard actions.
         if (showAddRunTypeSheet) {
             AddRunTypeBottomSheet(
                 onSave = { name, distance ->
@@ -181,6 +184,7 @@ fun DashboardScreen(
                 },
             )
         }
+        // Bottom sheet used by the start dock to pick an existing run type.
         if (showRunTypePicker) {
             RunTypePickerBottomSheet(
                 options = startRunOptions,
@@ -205,6 +209,7 @@ private fun FilterChipsRow(
     selectedFilter: String,
     onSelected: (String) -> Unit
 ) {
+    // Horizontal filter selector for dashboard metric scope (All / specific run type).
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         modifier = Modifier
@@ -241,6 +246,7 @@ private fun RunTypePickerBottomSheet(
     onAddRunType: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    // Start-run selection sheet: lets the user choose an existing run type or create one.
     ModalBottomSheet(
         onDismissRequest = onDismiss
     ) {
@@ -258,6 +264,7 @@ private fun RunTypePickerBottomSheet(
             Spacer(Modifier.height(12.dp))
 
             if (options.isEmpty()) {
+                // Empty state when no run types exist yet.
                 Text(
                     text = "Create a run type to start tracking.",
                     color = TextSecondary,
@@ -277,6 +284,7 @@ private fun RunTypePickerBottomSheet(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(14.dp))
+                            // Entire row is tappable to improve selection ergonomics.
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = LocalIndication.current
@@ -306,6 +314,7 @@ private fun StartRunDock(
     onSelectRunType: () -> Unit,
     onStartRun: () -> Unit
 ) {
+    // Persistent bottom CTA area for selecting run type and starting a run.
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -346,6 +355,7 @@ private fun StartRunDock(
                             .weight(1f)
                             .height(58.dp),
                         shape = RoundedCornerShape(16.dp),
+                        // Disabled until at least one run type is available.
                         enabled = hasRunTypes
                     ) {
                         Icon(Icons.Default.LocationOn, contentDescription = null)
@@ -360,6 +370,7 @@ private fun StartRunDock(
 
                     Button(
                         onClick = onStartRun,
+                        // Start is enabled only when there is a concrete selected run type.
                         enabled = hasRunTypes && selectedRunType.isNotBlank(),
                         modifier = Modifier
                             .weight(1f)
@@ -384,6 +395,8 @@ private fun StartRunDock(
 
 @Composable
 internal fun MetricsGrid() {
+    // Placeholder values until dashboard analytics are connected to real data.
+    // Kept as a dedicated composable so real metric wiring can be swapped in cleanly.
     Column {
         Row(Modifier.fillMaxWidth()) {
             MetricCard(
@@ -421,6 +434,7 @@ internal fun MetricsGrid() {
 
 @Composable
 internal fun MetricCard(title: String, value: String, icon: ImageVector, modifier: Modifier = Modifier) {
+    // Reusable stat card used by dashboard metric sections.
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(20.dp),

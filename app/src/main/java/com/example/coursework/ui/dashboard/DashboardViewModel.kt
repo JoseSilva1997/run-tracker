@@ -16,15 +16,20 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+// ViewModel for Dashboard UI state related to run type selection/filtering.
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
     private val repository: RunTypeRepository,
     private val preferencesRepository: UserPreferencesRepository
 ) : ViewModel() {
 
+    // Source of truth for available run types from Room via repository.
     private val _runTypes = MutableStateFlow<List<RunType>>(emptyList())
     val runTypes: StateFlow<List<RunType>> = _runTypes
 
+    // Selected run type name:
+    // 1) restores last saved selection when it still exists,
+    // 2) otherwise falls back to first available run type.
     val selectedRunType: StateFlow<String> = combine(
         runTypes,
         preferencesRepository.lastSelectedRunTypeName
@@ -37,6 +42,7 @@ class DashboardViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), "")
 
     init {
+        // Starts observing run types immediately so dashboard content stays current.
         viewModelScope.launch {
             repository.observeAll()
                 .catch { _runTypes.update { emptyList() }}
@@ -44,6 +50,7 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
+    // Persists the user's run type choice for future app sessions.
     fun onRunTypeSelected(name: String) {
         viewModelScope.launch {
             preferencesRepository.saveLastSelectedRunType(name)
