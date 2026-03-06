@@ -52,7 +52,7 @@ fun AppNavHost() {
                 onStartRunSelected = {runType ->
                     navController.navigate("liveRun/$runType")
                 },
-                onFilterSelected = {},
+                onFilterSelected = {},// Placeholder until filtering is implemented
                 onRunTypeSelected = { vm.onRunTypeSelected(it) },
                 onAddNewRunType = { name, distance -> 
                     addRunTypeVm.addRunType(name, distance)

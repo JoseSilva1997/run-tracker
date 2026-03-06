@@ -3,15 +3,20 @@ package com.example.coursework.ui.liveruns
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -34,7 +39,10 @@ import com.example.coursework.ui.theme.TextPrimary
 
 
 @Composable
-fun LiveRunScreen(runTypeName: String, onClose: () -> Unit) {
+fun LiveRunScreen(
+    runTypeName: String,
+    onClose: () -> Unit,
+) {
 
     Scaffold(
         containerColor = BgDark
@@ -197,22 +205,27 @@ internal  fun GoalDisplay(
 
 @Composable
 internal fun BottomContainer(modifier: Modifier, runTypeName: String) {
-    // Placeholder for the Map view
     Box(
         modifier = modifier,
         contentAlignment = Alignment.Center
     ) {
+        // Map as background
+        MapView(
+            modifier = Modifier.fillMaxSize()
+        )
+
         GoalDisplay(
             runTypeName = runTypeName,
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .padding(top = 8.dp)
         )
-        MapView(
-            modifier = Modifier
-                .fillMaxWidth()
-        )
 
+        StartButton(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 50.dp)
+        )
     }
 }
 
@@ -228,5 +241,47 @@ internal fun MapView(modifier: Modifier = Modifier) {
             color = TextPrimary.copy(alpha = 0.4f),
             style = MaterialTheme.typography.bodyLarge
         )
+    }
+}
+
+
+@Composable
+internal fun StartButton(modifier: Modifier = Modifier) {
+    val startButtonColor = Color(0xFFCE2029)
+    // Use explicit sizes for the layers to make the fade effect easy to control.
+    // The sizes are hierarchical: outer layer > middle layer > main button.
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.Center
+    ) {
+        // Outer fade layer (Largest)
+        Surface(
+            modifier = Modifier.size(140.dp),
+            shape = RoundedCornerShape(100.dp),
+            color = startButtonColor.copy(alpha = 0.1f)
+        ) {}
+
+        // Middle fade layer
+        Surface(
+            modifier = Modifier.size(116.dp),
+            shape = RoundedCornerShape(100.dp),
+            color = startButtonColor.copy(alpha = 0.2f)
+        ) {}
+
+        // Main Button (Center)
+        Button(
+            onClick = { },
+            modifier = Modifier.size(92.dp),
+            shape = RoundedCornerShape(100.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = startButtonColor),
+            contentPadding = PaddingValues(0.dp)
+        ) {
+            Text(
+                text = "START",
+                color = Color.White,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
     }
 }
