@@ -21,6 +21,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.example.coursework.ui.liveruns.LiveRunScreen
 import com.example.coursework.ui.theme.BgDark
 
 
@@ -48,7 +49,9 @@ fun AppNavHost() {
                 filterOptions = filterOptions,
                 startRunOptions = startRunOptions,
                 selectedRunType = selectedRunType,
-                onStartRunSelected = {},
+                onStartRunSelected = {runType ->
+                    navController.navigate("liveRun/$runType")
+                },
                 onFilterSelected = {},
                 onRunTypeSelected = { vm.onRunTypeSelected(it) },
                 onAddNewRunType = { name, distance -> 
@@ -56,5 +59,14 @@ fun AppNavHost() {
                 }
             )
         }
+
+        composable("liveRun/{runTypeName}") { backStackEntry ->
+            val runTypeName = backStackEntry.arguments?.getString("runTypeName") ?: ""
+            LiveRunScreen(
+                runTypeName = runTypeName,
+                onClose = { navController.popBackStack() }
+            )
+        }
+
     }
 }
