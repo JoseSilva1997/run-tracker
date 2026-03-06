@@ -1,5 +1,9 @@
 package com.example.coursework.ui.liveruns
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -26,23 +29,70 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.coursework.ui.theme.BgDark
 import com.example.coursework.ui.theme.BtnPrimary
 import com.example.coursework.ui.theme.TextPrimary
+import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.MapProperties
+import com.google.maps.android.compose.MapUiSettings
 
 
 @Composable
 fun LiveRunScreen(
     runTypeName: String,
     onClose: () -> Unit,
+    viewModel: LiveRunViewModel = hiltViewModel()
 ) {
+    val hasLocationPermission by viewModel.hasLocationPermission.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        // Check if either fine or coarse location was granted
+        val isGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+                permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        viewModel.onLocationPermissionResult(isGranted)
+    }
+
+    LaunchedEffect(Unit) {
+        val hasFineLocation = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+
+        val hasCoarseLocation = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (hasFineLocation || hasCoarseLocation) {
+            viewModel.onLocationPermissionResult(true)
+        } else {
+            // Request both permissions simultaneously
+            permissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
+        }
+    }
 
     Scaffold(
         containerColor = BgDark
@@ -66,7 +116,7 @@ fun LiveRunScreen(
                     elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
                 ) {
                     Column(
-                        modifier = Modifier.padding(top = 24.dp, start = 24.dp, end = 24.dp, bottom = 16.dp)
+                        modifier = Modifier.padding(all = 24.dp)
                     ) {
                         LiveTimer(modifier = Modifier.fillMaxWidth()) // Live Timer
 
@@ -87,7 +137,8 @@ fun LiveRunScreen(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth(),
-                    runTypeName = runTypeName
+                    runTypeName = runTypeName,
+                    hasLocationPermission = hasLocationPermission
                 )
             }
 
@@ -108,6 +159,7 @@ fun LiveRunScreen(
     }
 }
 
+// Baseline meter card composable
 @Composable
 internal fun MeterCard(
     measurement: String,
@@ -136,7 +188,7 @@ internal fun MeterCard(
     }
 }
 
-
+// Main MeterCard displaying the total time elapsed during a run
 @Composable
 internal fun LiveTimer(modifier: Modifier = Modifier) {
     MeterCard(
@@ -148,6 +200,7 @@ internal fun LiveTimer(modifier: Modifier = Modifier) {
     )
 }
 
+// MeterCard displaying the total distance ran
 @Composable
 internal fun DistanceMeter(modifier: Modifier = Modifier) {
     MeterCard(
@@ -159,6 +212,7 @@ internal fun DistanceMeter(modifier: Modifier = Modifier) {
     )
 }
 
+// MeterCard displaying the average pace during a run
 @Composable
 internal  fun PaceMeter(modifier: Modifier = Modifier) {
     MeterCard(
@@ -203,15 +257,21 @@ internal  fun GoalDisplay(
     }
 }
 
+// Bottom Container for the map and start button
 @Composable
-internal fun BottomContainer(modifier: Modifier, runTypeName: String) {
+internal fun BottomContainer(
+    modifier: Modifier,
+    runTypeName: String,
+    hasLocationPermission: Boolean = false
+) {
     Box(
         modifier = modifier,
         contentAlignment = Alignment.Center
     ) {
         // Map as background
         MapView(
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
+            hasLocationPermission = hasLocationPermission
         )
 
         GoalDisplay(
@@ -230,18 +290,32 @@ internal fun BottomContainer(modifier: Modifier, runTypeName: String) {
 }
 
 @Composable
-internal fun MapView(modifier: Modifier = Modifier) {
-    // Placeholder for the Map view
-    Box(
-        modifier = modifier,
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = "Map view will be integrated here",
-            color = TextPrimary.copy(alpha = 0.4f),
-            style = MaterialTheme.typography.bodyLarge
+internal fun MapView(
+    modifier: Modifier = Modifier,
+    hasLocationPermission: Boolean = false
+) {
+        // Re-create properties ONLY when the permission state changes
+        val mapProperties by remember (hasLocationPermission) {
+            mutableStateOf(
+                MapProperties(isMyLocationEnabled = hasLocationPermission)
+            )
+        }
+
+        // uiSettings don't change, so remember them across all recompositions
+        val uiSettings by remember {
+            mutableStateOf(
+                MapUiSettings(
+                    myLocationButtonEnabled = true,
+                    zoomControlsEnabled = false // Hides + and - buttons for a cleaner UI
+                )
+            )
+        }
+
+        GoogleMap(
+            modifier = modifier,
+            properties = mapProperties,
+            uiSettings = uiSettings
         )
-    }
 }
 
 
@@ -279,7 +353,7 @@ internal fun StartButton(modifier: Modifier = Modifier) {
             Text(
                 text = "START",
                 color = Color.White,
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
         }
