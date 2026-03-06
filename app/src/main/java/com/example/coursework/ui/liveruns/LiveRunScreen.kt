@@ -47,9 +47,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.coursework.ui.theme.BgDark
 import com.example.coursework.ui.theme.BtnPrimary
 import com.example.coursework.ui.theme.TextPrimary
+import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapUiSettings
+import com.google.maps.android.compose.Polyline
+import com.google.maps.android.compose.rememberCameraPositionState
 
 
 @Composable
@@ -59,6 +63,10 @@ fun LiveRunScreen(
     viewModel: LiveRunViewModel = hiltViewModel()
 ) {
     val hasLocationPermission by viewModel.hasLocationPermission.collectAsStateWithLifecycle()
+    val isTracking by viewModel.isTracking.collectAsStateWithLifecycle()
+    val pathPoints by viewModel.pathPoints.collectAsStateWithLifecycle()
+    val currentLocation by viewModel.currentLocation.collectAsStateWithLifecycle()
+
     val context = LocalContext.current
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -138,7 +146,11 @@ fun LiveRunScreen(
                         .weight(1f)
                         .fillMaxWidth(),
                     runTypeName = runTypeName,
-                    hasLocationPermission = hasLocationPermission
+                    hasLocationPermission = hasLocationPermission,
+                    isTracking = isTracking,
+                    pathPoints = pathPoints,
+                    onToggleTracking = viewModel::toggleTracking,
+                    currentLocation = currentLocation
                 )
             }
 
@@ -262,7 +274,11 @@ internal  fun GoalDisplay(
 internal fun BottomContainer(
     modifier: Modifier,
     runTypeName: String,
-    hasLocationPermission: Boolean = false
+    hasLocationPermission: Boolean,
+    isTracking: Boolean,
+    pathPoints: List<LatLng>,
+    onToggleTracking: () -> Unit,
+    currentLocation: LatLng?
 ) {
     Box(
         modifier = modifier,
@@ -271,7 +287,9 @@ internal fun BottomContainer(
         // Map as background
         MapView(
             modifier = Modifier.fillMaxSize(),
-            hasLocationPermission = hasLocationPermission
+            hasLocationPermission = hasLocationPermission,
+            pathPoints = pathPoints,
+            currentLocation = currentLocation
         )
 
         GoalDisplay(
@@ -284,7 +302,9 @@ internal fun BottomContainer(
         StartButton(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 50.dp)
+                .padding(bottom = 50.dp),
+            isTracking = isTracking,
+            onToggleTracking = onToggleTracking
         )
     }
 }
@@ -292,36 +312,80 @@ internal fun BottomContainer(
 @Composable
 internal fun MapView(
     modifier: Modifier = Modifier,
-    hasLocationPermission: Boolean = false
+    hasLocationPermission: Boolean,
+    pathPoints: List<LatLng>,
+    currentLocation: LatLng?
 ) {
-        // Re-create properties ONLY when the permission state changes
-        val mapProperties by remember (hasLocationPermission) {
-            mutableStateOf(
-                MapProperties(isMyLocationEnabled = hasLocationPermission)
+    val cameraPositionState = rememberCameraPositionState()
+
+    // 1. Initial Camera Setup:
+    // Animate to the user's location as soon as we get the first coordinate
+    LaunchedEffect(currentLocation) {
+        if (currentLocation != null && pathPoints.isEmpty()) {
+            cameraPositionState.animate(
+                update = CameraUpdateFactory.newLatLngZoom(currentLocation, 17f),
+                durationMs = 1000
             )
         }
+    }
 
-        // uiSettings don't change, so remember them across all recompositions
-        val uiSettings by remember {
-            mutableStateOf(
-                MapUiSettings(
-                    myLocationButtonEnabled = true,
-                    zoomControlsEnabled = false // Hides + and - buttons for a cleaner UI
-                )
+    // 2. Continuous Tracking Camera Setup:
+    // Follow the runner while tracking is active
+    LaunchedEffect(pathPoints.lastOrNull()) {
+        pathPoints.lastOrNull()?.let { latestLocation ->
+            cameraPositionState.animate(
+                update = CameraUpdateFactory.newLatLngZoom(latestLocation, 17f),
+                durationMs = 1000
             )
         }
+    }
 
-        GoogleMap(
-            modifier = modifier,
-            properties = mapProperties,
-            uiSettings = uiSettings
+    // Re-create properties ONLY when the permission state changes
+    val mapProperties by remember (hasLocationPermission) {
+        mutableStateOf(
+            MapProperties(isMyLocationEnabled = hasLocationPermission)
         )
+    }
+
+    // uiSettings don't change, so remember them across all recompositions
+    val uiSettings by remember {
+        mutableStateOf(
+            MapUiSettings(
+                myLocationButtonEnabled = true,
+                zoomControlsEnabled = false // Hides + and - buttons for a cleaner UI
+            )
+        )
+    }
+
+    GoogleMap(
+        modifier = modifier,
+        properties = mapProperties,
+        uiSettings = uiSettings,
+        cameraPositionState = cameraPositionState
+    ) {
+        // Draw the route
+        if (pathPoints.isNotEmpty()) {
+            Polyline(
+                points = pathPoints,
+                color = Color.Blue,
+                width = 12f
+            )
+        }
+    }
 }
 
 
 @Composable
-internal fun StartButton(modifier: Modifier = Modifier) {
+internal fun StartButton(
+    modifier: Modifier = Modifier,
+    isTracking: Boolean,
+    onToggleTracking: () -> Unit
+) {
     val startButtonColor = Color(0xFFCE2029)
+    val stopButtonColor = Color(0xFFFFA500) // Orange for STOP
+    
+    val activeColor = if (isTracking) stopButtonColor else startButtonColor
+    
     // Use explicit sizes for the layers to make the fade effect easy to control.
     // The sizes are hierarchical: outer layer > middle layer > main button.
     Box(
@@ -332,26 +396,26 @@ internal fun StartButton(modifier: Modifier = Modifier) {
         Surface(
             modifier = Modifier.size(140.dp),
             shape = RoundedCornerShape(100.dp),
-            color = startButtonColor.copy(alpha = 0.1f)
+            color = activeColor.copy(alpha = 0.1f)
         ) {}
 
         // Middle fade layer
         Surface(
             modifier = Modifier.size(116.dp),
             shape = RoundedCornerShape(100.dp),
-            color = startButtonColor.copy(alpha = 0.2f)
+            color = activeColor.copy(alpha = 0.2f)
         ) {}
 
         // Main Button (Center)
         Button(
-            onClick = { },
+            onClick = onToggleTracking,
             modifier = Modifier.size(92.dp),
             shape = RoundedCornerShape(100.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = startButtonColor),
+            colors = ButtonDefaults.buttonColors(containerColor = activeColor),
             contentPadding = PaddingValues(0.dp)
         ) {
             Text(
-                text = "START",
+                text = if (isTracking) "STOP" else "START",
                 color = Color.White,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
