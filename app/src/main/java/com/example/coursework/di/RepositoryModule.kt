@@ -3,9 +3,11 @@ package com.example.coursework.di
 import com.example.coursework.data.repository.RunRepositoryImpl
 import com.example.coursework.data.repository.RunTypeRepositoryImpl
 import com.example.coursework.data.repository.UserPreferencesRepositoryImpl
+import com.example.coursework.data.repository.WeatherRepositoryImpl
 import com.example.coursework.domain.repository.RunRepository
 import com.example.coursework.domain.repository.RunTypeRepository
 import com.example.coursework.domain.repository.UserPreferencesRepository
+import com.example.coursework.domain.repository.WeatherRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -35,4 +37,10 @@ abstract class RepositoryModule {
     abstract fun bindRunRepository(
         impl: RunRepositoryImpl
     ): RunRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindWeatherRepository(
+        impl: WeatherRepositoryImpl
+    ): WeatherRepository
 }
