@@ -14,7 +14,7 @@ import com.example.coursework.data.db.entity.RunTypeEntity
         RunSessionEntity::class,
         RunPointEntity::class
     ],
-    version = 2, // Added RunSession and RunPoint entities
+    version = 3,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {

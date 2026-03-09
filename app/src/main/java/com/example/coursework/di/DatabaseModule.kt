@@ -26,7 +26,7 @@ object DatabaseModule {
             AppDatabase::class.java,
             "run_tracker.db"
         )
-            .fallbackToDestructiveMigration(dropAllTables = true) // Updated line
+            .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
     }
 
