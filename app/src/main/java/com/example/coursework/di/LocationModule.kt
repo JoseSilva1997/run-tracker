@@ -1,6 +1,8 @@
+// di/LocationModule.kt
 package com.example.coursework.di
 
 import android.content.Context
+import com.example.coursework.data.location.LocationTrackerImpl
 import com.example.coursework.domain.locationtracker.LocationTracker
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
@@ -26,8 +28,8 @@ object LocationModule {
     @Provides
     @Singleton
     fun provideLocationTracker(
-        fusedLocationClient: FusedLocationProviderClient
+        fusedLocationProviderClient: FusedLocationProviderClient
     ): LocationTracker {
-        return LocationTracker(fusedLocationClient)
+        return LocationTrackerImpl(fusedLocationProviderClient)
     }
 }
