@@ -12,7 +12,7 @@ import androidx.room.PrimaryKey
 data class RunTypeEntity (
     @PrimaryKey(autoGenerate = true) val id: Long = 0L,
     val name: String,
-    val targetDistanceMeters: Int
+    val targetDistanceMeters: Float
 )
 
 

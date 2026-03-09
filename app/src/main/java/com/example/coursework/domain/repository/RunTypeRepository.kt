@@ -5,5 +5,6 @@ import kotlinx.coroutines.flow.Flow
 
 interface RunTypeRepository {
     fun observeAll(): Flow<List<RunType>>
-    suspend fun addRunType(name: String, targetDistanceMeters: Int): Result<Long>
+    suspend fun addRunType(name: String, targetDistanceMeters: Float): Result<Long>
+    suspend fun getRunTypeById(id: Long): RunType
 }

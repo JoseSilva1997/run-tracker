@@ -19,4 +19,7 @@ interface RunTypeDao {
     @Query("DELETE FROM run_type WHERE id = :id")
     suspend fun deleteById(id: Long)
 
+    @Query("SELECT * FROM run_type WHERE id = :id")
+    suspend fun getById(id: Long): RunTypeEntity
+
 }

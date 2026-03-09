@@ -16,7 +16,7 @@ class RunTypeRepositoryImpl @Inject constructor(
     override fun observeAll(): Flow<List<RunType>> =
         dao.observeAll().map { list -> list.map { it.toDomain() } }
 
-    override suspend fun addRunType(name: String, targetDistanceMeters: Int): Result<Long> {
+    override suspend fun addRunType(name: String, targetDistanceMeters: Float): Result<Long> {
         return try {
             val id = dao.insert(
                 RunTypeEntity(
@@ -28,5 +28,9 @@ class RunTypeRepositoryImpl @Inject constructor(
         } catch (t: Throwable) {
             Result.failure(t)
         }
+    }
+
+    override suspend fun getRunTypeById(id: Long): RunType {
+        return dao.getById(id).toDomain()
     }
 }

@@ -12,7 +12,7 @@ class AddRunTypeViewModel @Inject constructor(
     private val repository: RunTypeRepository
 ) : ViewModel() {
 
-    fun addRunType(name: String, distance: Int) {
+    fun addRunType(name: String, distance: Float) {
         viewModelScope.launch {
             repository.addRunType(name, distance)
         }
