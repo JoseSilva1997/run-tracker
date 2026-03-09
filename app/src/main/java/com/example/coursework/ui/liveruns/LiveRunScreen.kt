@@ -61,14 +61,25 @@ import com.google.maps.android.compose.rememberCameraPositionState
 fun LiveRunScreen(
     runTypeName: String,
     onClose: () -> Unit,
+    onRunFinished: (Long) -> Unit,
     viewModel: LiveRunViewModel = hiltViewModel()
 ) {
     val hasLocationPermission by viewModel.hasLocationPermission.collectAsStateWithLifecycle()
     val isTracking by viewModel.isTracking.collectAsStateWithLifecycle()
     val pathPoints by viewModel.pathPoints.collectAsStateWithLifecycle()
     val currentLocation by viewModel.currentLocation.collectAsStateWithLifecycle()
+    val elapsedTime by viewModel.elapsedTimeSeconds.collectAsStateWithLifecycle()
+    val distance by viewModel.distanceMeters.collectAsStateWithLifecycle()
+    val savedRunId by viewModel.savedRunId.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
+
+    // Get run id when finished
+    LaunchedEffect(savedRunId) {
+        savedRunId?.let { id ->
+            onRunFinished(id)
+        }
+    }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
@@ -103,6 +114,31 @@ fun LiveRunScreen(
         }
     }
 
+    // FORMATTING METRICS
+    // 1. Time (MM:SS or HH:MM:SS)
+    val hours = elapsedTime / 3600
+    val minutes = (elapsedTime % 3600) / 60
+    val seconds = elapsedTime % 60
+    val timeString = if (hours > 0) {
+        String.format("%02d:%02d:%02d", hours, minutes, seconds)
+    } else {
+        String.format("%02d:%02d", minutes, seconds)
+    }
+
+    // 2. Distance (Kilometers)
+    val distanceKm = distance / 1000f
+    val distanceString = String.format("%.2f", distanceKm)
+
+    // 3. Pace (Minutes per Kilometer)
+    val paceString = if (distanceKm > 0.05f) { // Prevent wild pace numbers in the first 50 meters
+        val paceMinutes = (elapsedTime / 60f) / distanceKm
+        val pMins = paceMinutes.toInt()
+        val pSecs = ((paceMinutes - pMins) * 60).toInt()
+        String.format("%d:%02d", pMins, pSecs)
+    } else {
+        "0:00"
+    }
+
     Scaffold(
         containerColor = BgDark
     ) { padding ->
@@ -127,7 +163,7 @@ fun LiveRunScreen(
                     Column(
                         modifier = Modifier.padding(all = 24.dp)
                     ) {
-                        LiveTimer(modifier = Modifier.fillMaxWidth()) // Live Timer
+                        LiveTimer(timeText = timeString, modifier = Modifier.fillMaxWidth()) // Live Timer
 
                         Spacer(Modifier.height(16.dp))
 
@@ -136,8 +172,8 @@ fun LiveRunScreen(
                                 .fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceEvenly
                         ) {
-                            DistanceMeter(modifier = Modifier.weight(1f))
-                            PaceMeter(modifier = Modifier.weight(1f))
+                            DistanceMeter(distanceText = distanceString, modifier = Modifier.weight(1f))
+                            PaceMeter(paceText = paceString, modifier = Modifier.weight(1f))
                         }
                     }
                 }
@@ -150,7 +186,8 @@ fun LiveRunScreen(
                     hasLocationPermission = hasLocationPermission,
                     isTracking = isTracking,
                     pathPoints = pathPoints,
-                    onToggleTracking = viewModel::toggleTracking,
+                    onToggleTracking =  {
+                        if (isTracking) viewModel.finishAndSaveRun() else viewModel.toggleTracking() },
                     currentLocation = currentLocation
                 )
             }
@@ -203,7 +240,7 @@ internal fun MeterCard(
 
 // Main MeterCard displaying the total time elapsed during a run
 @Composable
-internal fun LiveTimer(modifier: Modifier = Modifier) {
+internal fun LiveTimer(timeText: String, modifier: Modifier = Modifier) {
     MeterCard(
         measurement = "00:00:00",
         style = MaterialTheme.typography.headlineLarge,
@@ -215,7 +252,7 @@ internal fun LiveTimer(modifier: Modifier = Modifier) {
 
 // MeterCard displaying the total distance ran
 @Composable
-internal fun DistanceMeter(modifier: Modifier = Modifier) {
+internal fun DistanceMeter(distanceText: String, modifier: Modifier = Modifier) {
     MeterCard(
         measurement = "0.00",
         style = MaterialTheme.typography.headlineSmall,
@@ -227,7 +264,7 @@ internal fun DistanceMeter(modifier: Modifier = Modifier) {
 
 // MeterCard displaying the average pace during a run
 @Composable
-internal  fun PaceMeter(modifier: Modifier = Modifier) {
+internal  fun PaceMeter(paceText: String, modifier: Modifier = Modifier) {
     MeterCard(
         measurement = "0:00",
         style = MaterialTheme.typography.headlineSmall,
