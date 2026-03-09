@@ -64,6 +64,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.coursework.domain.model.RunType
 import com.example.coursework.ui.runtypes.AddRunTypeBottomSheet
 import com.example.coursework.ui.theme.BgDark
 import com.example.coursework.ui.theme.BtnPrimary
@@ -76,9 +77,9 @@ import com.example.coursework.ui.theme.TextSecondary
 @Composable
 fun DashboardScreen(
     filterOptions: List<String>,
-    startRunOptions: List<String>,
-    selectedRunType: String,
-    onStartRunSelected: (String) -> Unit,
+    startRunOptions: List<RunType>,
+    selectedRunTypeName: String,
+    onStartRunSelected: (RunType) -> Unit,
     onFilterSelected: (String) -> Unit,
     onRunTypeSelected: (String) -> Unit,
     onAddNewRunType: (String, Int) -> Unit
@@ -99,10 +100,14 @@ fun DashboardScreen(
         containerColor = BgDark,
         bottomBar = {
             StartRunDock(
-                selectedRunType = selectedRunType,
+                selectedRunTypeName = selectedRunTypeName,
                 hasRunTypes = startRunOptions.isNotEmpty(),
                 onSelectRunType = { showRunTypePicker = true },
-                onStartRun = { onStartRunSelected(selectedRunType) }
+                onStartRun = {
+                    startRunOptions
+                        .firstOrNull { it.name == selectedRunTypeName }
+                        ?.let(onStartRunSelected)
+                }
             )
         }
     ) { padding ->
@@ -188,7 +193,7 @@ fun DashboardScreen(
         if (showRunTypePicker) {
             RunTypePickerBottomSheet(
                 options = startRunOptions,
-                selectedRunType = selectedRunType,
+                selectedRunTypeName = selectedRunTypeName,
                 onRunTypeSelected = {
                     onRunTypeSelected(it)
                     showRunTypePicker = false
@@ -240,8 +245,8 @@ private fun FilterChipsRow(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RunTypePickerBottomSheet(
-    options: List<String>,
-    selectedRunType: String,
+    options: List<RunType>,
+    selectedRunTypeName: String,
     onRunTypeSelected: (String) -> Unit,
     onAddRunType: () -> Unit,
     onDismiss: () -> Unit
@@ -274,10 +279,10 @@ private fun RunTypePickerBottomSheet(
             } else {
                 options.forEach { option ->
                     ListItem(
-                        headlineContent = { Text(option) },
+                        headlineContent = { Text(option.name) },
                         leadingContent = {
                             RadioButton(
-                                selected = option == selectedRunType,
+                                selected = option.name == selectedRunTypeName,
                                 onClick = null
                             )
                         },
@@ -288,7 +293,7 @@ private fun RunTypePickerBottomSheet(
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = LocalIndication.current
-                            ) { onRunTypeSelected(option) }
+                            ) { onRunTypeSelected(option.name) }
                     )
                 }
             }
@@ -309,7 +314,7 @@ private fun RunTypePickerBottomSheet(
 
 @Composable
 private fun StartRunDock(
-    selectedRunType: String,
+    selectedRunTypeName: String,
     hasRunTypes: Boolean,
     onSelectRunType: () -> Unit,
     onStartRun: () -> Unit
@@ -361,7 +366,7 @@ private fun StartRunDock(
                         Icon(Icons.Default.LocationOn, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            text = selectedRunType.ifBlank { "Choose" },
+                            text = selectedRunTypeName.ifBlank { "Choose" },
                             modifier = Modifier.weight(1f),
                             maxLines = 1
                         )
@@ -371,7 +376,7 @@ private fun StartRunDock(
                     Button(
                         onClick = onStartRun,
                         // Start is enabled only when there is a concrete selected run type.
-                        enabled = hasRunTypes && selectedRunType.isNotBlank(),
+                        enabled = hasRunTypes && selectedRunTypeName.isNotBlank(),
                         modifier = Modifier
                             .weight(1f)
                             .height(58.dp),

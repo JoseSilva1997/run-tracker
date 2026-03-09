@@ -1,5 +1,6 @@
 package com.example.coursework.data.repository
 
+import com.example.coursework.BuildConfig
 import com.example.coursework.data.network.WeatherApi
 import com.example.coursework.domain.model.WeatherSnapshot
 import com.example.coursework.domain.repository.WeatherRepository
@@ -9,11 +10,15 @@ class WeatherRepositoryImpl @Inject constructor(
     private val weatherApi: WeatherApi
 ) : WeatherRepository {
 
-    private val apiKey = "MY_OPENWEATHERMAP_API_KEY"
+     val openWeatherApiKey = BuildConfig.OPEN_WEATHER_API_KEY
 
     override suspend fun getWeatherAtLocation(lat: Double, lng: Double): WeatherSnapshot? {
         return try {
-            val response = weatherApi.getCurrentWeather(lat, lng, apiKey)
+            val response = weatherApi.getCurrentWeather(
+                lat,
+                lng,
+                apiKey = openWeatherApiKey
+            )
 
             WeatherSnapshot(
                 temperatureC = response.main.temp,
