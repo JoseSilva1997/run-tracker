@@ -3,7 +3,7 @@ package com.example.coursework.data.location
 import android.annotation.SuppressLint
 import android.os.Looper
 import com.example.coursework.domain.locationtracker.LocationTracker
-import com.example.coursework.domain.model.LocationPoint
+import com.example.coursework.domain.model.RunPoint
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
@@ -18,7 +18,7 @@ class LocationTrackerImpl(
 ) : LocationTracker {
 
     @SuppressLint("MissingPermission")
-    override fun getLocationUpdates(intervalMs: Long): Flow<LocationPoint> {
+    override fun getLocationUpdates(intervalMs: Long): Flow<RunPoint> {
         return callbackFlow {
             val locationRequest = LocationRequest.Builder(
                 Priority.PRIORITY_HIGH_ACCURACY,
@@ -30,7 +30,7 @@ class LocationTrackerImpl(
                     super.onLocationResult(result)
                     result.locations.lastOrNull()?.let { location ->
                         // Map the Android Location to your Domain Model
-                        val point = LocationPoint(
+                        val point = RunPoint(
                             latitude = location.latitude,
                             longitude = location.longitude,
                             accuracy = location.accuracy,
