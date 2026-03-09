@@ -92,50 +92,56 @@ class LiveRunViewModel @Inject constructor(
         locationJob = viewModelScope.launch {
             // Using 3000ms (3 seconds) interval
             locationTracker.getLocationUpdates(3000L).collect { locationPoint ->
-                val latLng = LatLng(locationPoint.latitude, locationPoint.longitude)
-
-                _currentLocation.value = latLng
-
-                if (_isTracking.value) {
-                    // 1. Fetch weather on the first valid point
-                    if (!hasFetchedWeather) {
-                        hasFetchedWeather = true
-                        fetchWeatherAsync(locationPoint.latitude, locationPoint.longitude)
-                    }
-                    // 2. Add to points to save
-                    runPointsToSave.add(
-                        RunPoint(
-                            latitude = locationPoint.latitude,
-                            longitude = locationPoint.longitude,
-                            timestamp = locationPoint.timestamp,
-                            accuracy = locationPoint.accuracy
-                        )
-                    )
-
-                    // 3. Calculate distance
-                    val currentPoints = _pathPoints.value
-                    if (currentPoints.isNotEmpty()) {
-                        val lastPoint = currentPoints.last()
-                        val results = FloatArray(1)
-                        android.location.Location.distanceBetween(
-                            lastPoint.latitude, lastPoint.longitude,
-                            latLng.latitude, latLng.longitude,
-                            results
-                        )
-
-                        val newDistance = _distanceMeters.value + results[0]
-                        _distanceMeters.value = newDistance
-
-                        // 4. Check if target is reached
-                        if (_targetDistanceMeters.value > 0 && newDistance >= _targetDistanceMeters.value) {
-                            _distanceMeters.value = _targetDistanceMeters.value // Cap at target
-                            finishAndSaveRun()
-                        }
-                    }
-
-                    _pathPoints.value = currentPoints + latLng
-                }
+                processLocationUpdate(locationPoint)
             }
+        }
+    }
+
+    private fun processLocationUpdate(runPoint: RunPoint) {
+        val latLng = LatLng(runPoint.latitude, runPoint.longitude)
+
+        // 1. Always update current location so the map can center
+        _currentLocation.value = latLng
+
+        // 2. Only record metrics if the user has hit "Start"
+        if (_isTracking.value) {
+            handleInitialWeatherFetch(runPoint.latitude, runPoint.longitude)
+
+            runPointsToSave.add(runPoint)
+
+            updateDistanceAndCheckTarget(latLng)
+            _pathPoints.value += latLng
+        }
+    }
+
+    private fun handleInitialWeatherFetch(lat: Double, lng: Double) {
+        if (!hasFetchedWeather) {
+            hasFetchedWeather = true
+            fetchWeatherAsync(lat, lng)
+        }
+    }
+
+    private fun updateDistanceAndCheckTarget(newLatLng: LatLng) {
+        val currentPoints = _pathPoints.value
+        if (currentPoints.isEmpty()) return // No previous point to measure from
+
+        // Calculate distance from the last known point
+        val lastPoint = currentPoints.last()
+        val results = FloatArray(1)
+        android.location.Location.distanceBetween(
+            lastPoint.latitude, lastPoint.longitude,
+            newLatLng.latitude, newLatLng.longitude,
+            results
+        )
+
+        val newDistance = _distanceMeters.value + results[0]
+
+        // Check if target is reached and cap the distance
+        if (_targetDistanceMeters.value > 0 && newDistance >= _targetDistanceMeters.value) {
+            _distanceMeters.value = _targetDistanceMeters.value
+            finishAndSaveRun()
+        } else {
+            _distanceMeters.value = newDistance
         }
     }
 
@@ -178,6 +184,7 @@ class LiveRunViewModel @Inject constructor(
             }
         }
     }
+
     override fun onCleared() {
         super.onCleared()
         locationJob?.cancel()
