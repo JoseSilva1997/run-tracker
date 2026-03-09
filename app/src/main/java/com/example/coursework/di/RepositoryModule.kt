@@ -1,9 +1,9 @@
 package com.example.coursework.di
 
 import com.example.coursework.domain.repository.RunTypeRepository
-import com.example.coursework.domain.repository.RunTypeRepositoryImpl
+import com.example.coursework.data.repository.RunTypeRepositoryImpl
 import com.example.coursework.domain.repository.UserPreferencesRepository
-import com.example.coursework.domain.repository.UserPreferencesRepositoryImpl
+import com.example.coursework.data.repository.UserPreferencesRepositoryImpl
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn

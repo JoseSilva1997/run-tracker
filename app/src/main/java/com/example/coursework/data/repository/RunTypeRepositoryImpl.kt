@@ -1,12 +1,13 @@
-package com.example.coursework.domain.repository
+package com.example.coursework.data.repository
 
 import com.example.coursework.data.db.dao.RunTypeDao
 import com.example.coursework.data.db.entity.RunTypeEntity
 import com.example.coursework.domain.model.RunType
+import com.example.coursework.domain.repository.RunTypeRepository
 import com.example.coursework.util.mappers.toDomain
-import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import javax.inject.Inject
 
 class RunTypeRepositoryImpl @Inject constructor(
     private val dao: RunTypeDao
