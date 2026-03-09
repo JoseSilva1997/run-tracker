@@ -55,6 +55,7 @@ import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberCameraPositionState
+import java.util.Locale
 
 
 @Composable
@@ -115,26 +116,28 @@ fun LiveRunScreen(
     }
 
     // FORMATTING METRICS
-    // 1. Time (MM:SS or HH:MM:SS)
+    // 1. Time (always HH:MM:SS for a stable timer layout)
     val hours = elapsedTime / 3600
     val minutes = (elapsedTime % 3600) / 60
     val seconds = elapsedTime % 60
-    val timeString = if (hours > 0) {
-        String.format("%02d:%02d:%02d", hours, minutes, seconds)
-    } else {
-        String.format("%02d:%02d", minutes, seconds)
-    }
+    val timeString = String.format(
+        Locale.getDefault(),
+        "%02d:%02d:%02d",
+        hours,
+        minutes,
+        seconds
+    )
 
     // 2. Distance (Kilometers)
     val distanceKm = distance / 1000f
-    val distanceString = String.format("%.2f", distanceKm)
+    val distanceString = String.format(Locale.getDefault(), "%.2f", distanceKm)
 
     // 3. Pace (Minutes per Kilometer)
     val paceString = if (distanceKm > 0.05f) { // Prevent wild pace numbers in the first 50 meters
         val paceMinutes = (elapsedTime / 60f) / distanceKm
         val pMins = paceMinutes.toInt()
         val pSecs = ((paceMinutes - pMins) * 60).toInt()
-        String.format("%d:%02d", pMins, pSecs)
+        String.format(Locale.getDefault(), "%d:%02d", pMins, pSecs)
     } else {
         "0:00"
     }
@@ -242,7 +245,7 @@ internal fun MeterCard(
 @Composable
 internal fun LiveTimer(timeText: String, modifier: Modifier = Modifier) {
     MeterCard(
-        measurement = "00:00:00",
+        measurement = timeText,
         style = MaterialTheme.typography.headlineLarge,
         fontWeight = FontWeight.Bold,
         measureUnit = "ELAPSED TIME",
@@ -254,7 +257,7 @@ internal fun LiveTimer(timeText: String, modifier: Modifier = Modifier) {
 @Composable
 internal fun DistanceMeter(distanceText: String, modifier: Modifier = Modifier) {
     MeterCard(
-        measurement = "0.00",
+        measurement = distanceText,
         style = MaterialTheme.typography.headlineSmall,
         fontWeight = FontWeight.SemiBold,
         measureUnit = "KM",
@@ -266,7 +269,7 @@ internal fun DistanceMeter(distanceText: String, modifier: Modifier = Modifier) 
 @Composable
 internal  fun PaceMeter(paceText: String, modifier: Modifier = Modifier) {
     MeterCard(
-        measurement = "0:00",
+        measurement = paceText,
         style = MaterialTheme.typography.headlineSmall,
         fontWeight = FontWeight.SemiBold,
         measureUnit = "PACE (MIN/KM)",
