@@ -17,6 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.coursework.ui.liveruns.LiveRunScreen
+import com.example.coursework.ui.summary.SummaryScreen
 import com.example.coursework.ui.theme.BgDark
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
@@ -68,7 +69,24 @@ fun AppNavHost() {
             LiveRunScreen(
                 runTypeName = runTypeName,
                 onClose = { navController.popBackStack() },
-                onRunFinished = { /* TODO */ }
+                onRunFinished = { runId ->
+                    navController.navigate("summary/$runId")
+                }
+            )
+        }
+
+        composable(
+            route = "summary/{runId}",
+            arguments = listOf(
+                navArgument("runId") { type = NavType.LongType }
+            )
+        ) {
+            SummaryScreen(
+                onDone = {
+                    navController.navigate("dashboard") {
+                        popUpTo("dashboard") { inclusive = true }
+                    }
+                }
             )
         }
 
