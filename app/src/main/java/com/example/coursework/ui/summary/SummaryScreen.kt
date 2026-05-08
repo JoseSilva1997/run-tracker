@@ -19,9 +19,11 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.coursework.domain.model.RunSession
+import com.example.coursework.domain.model.RunType
 import com.example.coursework.ui.theme.BgDark
 import com.example.coursework.ui.theme.TextPrimary
 import com.example.coursework.ui.theme.TextSecondary
+import com.example.coursework.util.calcs.CommonUtils
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -60,7 +62,10 @@ fun SummaryScreen(
                 }
 
                 uiState.runSession != null -> {
-                    SummaryContent(runSession = uiState.runSession!!)
+                    SummaryContent(
+                        runSession = uiState.runSession!!,
+                        runType = uiState.runType,
+                    )
                 }
             }
 
@@ -77,16 +82,19 @@ fun SummaryScreen(
 }
 
 @Composable
-private fun SummaryContent(runSession: RunSession) {
+private fun SummaryContent(
+    runSession: RunSession,
+    runType: RunType?,
+    commonUtils: CommonUtils = CommonUtils()
+) {
     val weather = runSession.weatherSnapshot
     val dateText = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
         .format(Date(runSession.timestamp))
 
     val statLines = listOf(
-        "Run ID: ${runSession.id}",
-        "Run Type ID: ${runSession.runTypeId}",
-        "Duration Seconds: ${runSession.durationSeconds}",
-        "Distance Meters: ${String.format(Locale.getDefault(), "%.2f", runSession.totalDistanceMeters)}",
+        "Run Type: ${runType?.name ?: "Unknown"}",
+        "Duration Minutes: ${commonUtils.getTimeInMinutesAsAString(runSession.durationSeconds)}",
+        "Distance Meters: ${String.format(Locale.getDefault(), "%.2f", runSession.totalDistanceMeters)} min",
         "Timestamp: $dateText",
         "Temperature C: ${weather?.temperatureC?.toString() ?: "N/A"}",
         "Condition: ${weather?.conditionText ?: "N/A"}",
