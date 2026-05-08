@@ -43,7 +43,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.coursework.ui.theme.BgDark
 import com.example.coursework.ui.theme.BtnPrimary
@@ -55,9 +54,7 @@ import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberCameraPositionState
-import java.util.Locale
 
-private const val PACE_DISPLAY_MIN_KM = 0.05f
 private const val MAP_FOLLOW_ZOOM = 17f
 private const val MAP_CAMERA_ANIMATION_MS = 1000
 
@@ -69,12 +66,6 @@ fun LiveRunScreen(
     viewModel: LiveRunViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val hasLocationPermission = state.hasLocationPermission
-    val isTracking = state.isTracking
-    val pathPoints = state.pathPoints
-    val currentLocation = state.currentLocation
-    val elapsedTime = state.elapsedTimeSeconds
-    val distance = state.distanceMeters
 
     val context = LocalContext.current
 
@@ -116,33 +107,6 @@ fun LiveRunScreen(
         }
     }
 
-    // FORMATTING METRICS
-    // 1. Time (always HH:MM:SS for a stable timer layout)
-    val hours = elapsedTime / 3600
-    val minutes = (elapsedTime % 3600) / 60
-    val seconds = elapsedTime % 60
-    val timeString = String.format(
-        Locale.getDefault(),
-        "%02d:%02d:%02d",
-        hours,
-        minutes,
-        seconds
-    )
-
-    // 2. Distance (Kilometers)
-    val distanceKm = distance / 1000f
-    val distanceString = String.format(Locale.getDefault(), "%.2f", distanceKm)
-
-    // 3. Pace (Minutes per Kilometer)
-    val paceString = if (distanceKm > PACE_DISPLAY_MIN_KM) { // Prevent wild pace numbers in the first 50 meters
-        val paceMinutes = (elapsedTime / 60f) / distanceKm
-        val pMins = paceMinutes.toInt()
-        val pSecs = ((paceMinutes - pMins) * 60).toInt()
-        String.format(Locale.getDefault(), "%d:%02d", pMins, pSecs)
-    } else {
-        "0:00"
-    }
-
     Scaffold(
         containerColor = BgDark
     ) { padding ->
@@ -167,7 +131,7 @@ fun LiveRunScreen(
                     Column(
                         modifier = Modifier.padding(all = 24.dp)
                     ) {
-                        LiveTimer(timeText = timeString, modifier = Modifier.fillMaxWidth()) // Live Timer
+                        LiveTimer(timeText = state.timeString, modifier = Modifier.fillMaxWidth())
 
                         Spacer(Modifier.height(16.dp))
 
@@ -176,8 +140,8 @@ fun LiveRunScreen(
                                 .fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceEvenly
                         ) {
-                            DistanceMeter(distanceText = distanceString, modifier = Modifier.weight(1f))
-                            PaceMeter(paceText = paceString, modifier = Modifier.weight(1f))
+                            DistanceMeter(distanceText = state.distanceString, modifier = Modifier.weight(1f))
+                            PaceMeter(paceText = state.paceString, modifier = Modifier.weight(1f))
                         }
                     }
                 }
@@ -187,12 +151,13 @@ fun LiveRunScreen(
                         .weight(1f)
                         .fillMaxWidth(),
                     runTypeName = runTypeName,
-                    hasLocationPermission = hasLocationPermission,
-                    isTracking = isTracking,
-                    pathPoints = pathPoints,
-                    onToggleTracking =  {
-                        if (isTracking) viewModel.finishAndSaveRun() else viewModel.toggleTracking() },
-                    currentLocation = currentLocation
+                    hasLocationPermission = state.hasLocationPermission,
+                    isTracking = state.isTracking,
+                    pathPoints = state.pathPoints,
+                    onToggleTracking = {
+                        if (state.isTracking) viewModel.finishAndSaveRun() else viewModel.toggleTracking()
+                    },
+                    currentLocation = state.currentLocation
                 )
             }
 

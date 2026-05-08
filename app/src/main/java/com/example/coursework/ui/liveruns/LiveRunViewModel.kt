@@ -20,10 +20,15 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.Locale
 import javax.inject.Inject
 
 private const val LOCATION_UPDATE_INTERVAL_MS = 3000L
 private const val TIMER_TICK_MS = 1000L
+private const val PACE_DISPLAY_MIN_KM = 0.05f
+private const val SECONDS_PER_MINUTE = 60
+private const val SECONDS_PER_HOUR = 3600
+private const val METERS_PER_KM = 1000f
 
 data class LiveRunUiState(
     val hasLocationPermission: Boolean = false,
@@ -33,7 +38,33 @@ data class LiveRunUiState(
     val elapsedTimeSeconds: Long = 0L,
     val currentLocation: LatLng? = null,
     val pathPoints: List<LatLng> = emptyList()
-)
+) {
+    // Derived display strings. Pure functions of canonical fields; not part of
+    // equals/hashCode/copy, so they don't affect Compose recomposition keys.
+    val timeString: String
+        get() {
+            val hours = elapsedTimeSeconds / SECONDS_PER_HOUR
+            val minutes = (elapsedTimeSeconds % SECONDS_PER_HOUR) / SECONDS_PER_MINUTE
+            val seconds = elapsedTimeSeconds % SECONDS_PER_MINUTE
+            return String.format(Locale.getDefault(), "%02d:%02d:%02d", hours, minutes, seconds)
+        }
+
+    val distanceKm: Float
+        get() = distanceMeters / METERS_PER_KM
+
+    val distanceString: String
+        get() = String.format(Locale.getDefault(), "%.2f", distanceKm)
+
+    val paceString: String
+        get() {
+            // Below the gate the divisor is too small to give meaningful pace.
+            if (distanceKm <= PACE_DISPLAY_MIN_KM) return "0:00"
+            val paceMinutes = (elapsedTimeSeconds / SECONDS_PER_MINUTE.toFloat()) / distanceKm
+            val pMins = paceMinutes.toInt()
+            val pSecs = ((paceMinutes - pMins) * SECONDS_PER_MINUTE).toInt()
+            return String.format(Locale.getDefault(), "%d:%02d", pMins, pSecs)
+        }
+}
 
 @HiltViewModel
 class LiveRunViewModel @Inject constructor(
