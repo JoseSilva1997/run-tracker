@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.dp
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddRunTypeBottomSheet (
-    onSave: (name: String, distance: Int) -> Unit,
+    onSave: (name: String, distanceMeters: Float) -> Unit,
     onDismiss: () -> Unit
 ) {
     var name by remember { mutableStateOf("") }
@@ -103,7 +103,7 @@ fun AddRunTypeBottomSheet (
                     val isDistanceValid = isValidDistance(distance) { distanceError = it }
 
                     if (isNameValid && isDistanceValid) {
-                        onSave(trimmedName, distance.toInt())
+                        onSave(trimmedName, distance.toInt().toFloat())
                         onDismiss()
                     }
                 },

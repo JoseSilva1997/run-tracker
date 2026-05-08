@@ -1,6 +1,6 @@
 package com.example.coursework.util.calcs
 
-class CommonUtils {
+object CommonUtils {
 
     fun calculateMinutesFromSeconds(seconds: Long): Long {
         return seconds / 60

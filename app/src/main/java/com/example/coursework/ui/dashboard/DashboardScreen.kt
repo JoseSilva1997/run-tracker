@@ -82,7 +82,7 @@ fun DashboardScreen(
     onStartRunSelected: (RunType) -> Unit,
     onFilterSelected: (String) -> Unit,
     onRunTypeSelected: (String) -> Unit,
-    onAddNewRunType: (String, Int) -> Unit
+    onAddNewRunType: (String, Float) -> Unit
 ) {
     var showAddRunTypeSheet by remember { mutableStateOf(false) }
     var showRunTypePicker by remember { mutableStateOf(false) }

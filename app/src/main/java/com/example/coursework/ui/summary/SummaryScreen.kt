@@ -85,7 +85,6 @@ fun SummaryScreen(
 private fun SummaryContent(
     runSession: RunSession,
     runType: RunType?,
-    commonUtils: CommonUtils = CommonUtils()
 ) {
     val weather = runSession.weatherSnapshot
     val dateText = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
@@ -93,7 +92,7 @@ private fun SummaryContent(
 
     val statLines = listOf(
         "Run Type: ${runType?.name ?: "Unknown"}",
-        "Duration Minutes: ${commonUtils.getTimeInMinutesAsAString(runSession.durationSeconds)}",
+        "Duration Minutes: ${CommonUtils.getTimeInMinutesAsAString(runSession.durationSeconds)}",
         "Distance Meters: ${String.format(Locale.getDefault(), "%.2f", runSession.totalDistanceMeters)} min",
         "Timestamp: $dateText",
         "Temperature C: ${weather?.temperatureC?.toString() ?: "N/A"}",

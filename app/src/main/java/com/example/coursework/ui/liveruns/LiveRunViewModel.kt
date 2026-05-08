@@ -50,6 +50,10 @@ class LiveRunViewModel @Inject constructor(
     private var weatherSnapshot: WeatherSnapshot? = null
     private var hasFetchedWeather = false
 
+    // Last point used for distance accumulation. Independent from _pathPoints
+    // so the first segment after Start isn't dropped or measured against stale data.
+    private var lastTrackedPoint: LatLng? = null
+
     // Navigation trigger
     private val _savedRunId = MutableStateFlow<Long?>(null)
     val savedRunId = _savedRunId.asStateFlow()
@@ -85,7 +89,14 @@ class LiveRunViewModel @Inject constructor(
     fun toggleTracking() {
         val willTrack = !_isTracking.value
         _isTracking.value = willTrack
-        if (willTrack) startTimer() else timerJob?.cancel()
+        if (willTrack) {
+            // Seed distance baseline with the most recent fix so the first recorded
+            // segment is measured from where the user actually pressed Start.
+            lastTrackedPoint = _currentLocation.value
+            startTimer()
+        } else {
+            timerJob?.cancel()
+        }
     }
 
     private fun startLocationUpdates() {
@@ -122,14 +133,14 @@ class LiveRunViewModel @Inject constructor(
     }
 
     private fun updateDistanceAndCheckTarget(newLatLng: LatLng) {
-        val currentPoints = _pathPoints.value
-        if (currentPoints.isEmpty()) return // No previous point to measure from
+        val previous = lastTrackedPoint
+        lastTrackedPoint = newLatLng
 
-        // Calculate distance from the last known point
-        val lastPoint = currentPoints.last()
+        if (previous == null) return // First fix after Start: nothing to measure yet.
+
         val results = FloatArray(1)
         android.location.Location.distanceBetween(
-            lastPoint.latitude, lastPoint.longitude,
+            previous.latitude, previous.longitude,
             newLatLng.latitude, newLatLng.longitude,
             results
         )
