@@ -57,6 +57,9 @@ import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberCameraPositionState
 import java.util.Locale
 
+private const val PACE_DISPLAY_MIN_KM = 0.05f
+private const val MAP_FOLLOW_ZOOM = 17f
+private const val MAP_CAMERA_ANIMATION_MS = 1000
 
 @Composable
 fun LiveRunScreen(
@@ -133,7 +136,7 @@ fun LiveRunScreen(
     val distanceString = String.format(Locale.getDefault(), "%.2f", distanceKm)
 
     // 3. Pace (Minutes per Kilometer)
-    val paceString = if (distanceKm > 0.05f) { // Prevent wild pace numbers in the first 50 meters
+    val paceString = if (distanceKm > PACE_DISPLAY_MIN_KM) { // Prevent wild pace numbers in the first 50 meters
         val paceMinutes = (elapsedTime / 60f) / distanceKm
         val pMins = paceMinutes.toInt()
         val pSecs = ((paceMinutes - pMins) * 60).toInt()
@@ -364,8 +367,8 @@ internal fun MapView(
     LaunchedEffect(currentLocation) {
         if (currentLocation != null && pathPoints.isEmpty()) {
             cameraPositionState.animate(
-                update = CameraUpdateFactory.newLatLngZoom(currentLocation, 17f),
-                durationMs = 1000
+                update = CameraUpdateFactory.newLatLngZoom(currentLocation, MAP_FOLLOW_ZOOM),
+                durationMs = MAP_CAMERA_ANIMATION_MS
             )
         }
     }
@@ -375,8 +378,8 @@ internal fun MapView(
     LaunchedEffect(pathPoints.lastOrNull()) {
         pathPoints.lastOrNull()?.let { latestLocation ->
             cameraPositionState.animate(
-                update = CameraUpdateFactory.newLatLngZoom(latestLocation, 17f),
-                durationMs = 1000
+                update = CameraUpdateFactory.newLatLngZoom(latestLocation, MAP_FOLLOW_ZOOM),
+                durationMs = MAP_CAMERA_ANIMATION_MS
             )
         }
     }

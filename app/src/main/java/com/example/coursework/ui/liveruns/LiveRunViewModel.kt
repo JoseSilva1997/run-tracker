@@ -20,6 +20,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+private const val LOCATION_UPDATE_INTERVAL_MS = 3000L
+private const val TIMER_TICK_MS = 1000L
+
 @HiltViewModel
 class LiveRunViewModel @Inject constructor(
     private val locationTracker: LocationTracker,
@@ -50,7 +53,7 @@ class LiveRunViewModel @Inject constructor(
     private var weatherSnapshot: WeatherSnapshot? = null
     private var hasFetchedWeather = false
 
-    // Last point used for distance accumulation. Independent from _pathPoints
+    // Last point used for distance accumulation. Independent of _pathPoints
     // so the first segment after Start isn't dropped or measured against stale data.
     private var lastTrackedPoint: LatLng? = null
 
@@ -101,8 +104,7 @@ class LiveRunViewModel @Inject constructor(
 
     private fun startLocationUpdates() {
         locationJob = viewModelScope.launch {
-            // Using 3000ms (3 seconds) interval
-            locationTracker.getLocationUpdates(3000L).collect { locationPoint ->
+            locationTracker.getLocationUpdates(LOCATION_UPDATE_INTERVAL_MS).collect { locationPoint ->
                 processLocationUpdate(locationPoint)
             }
         }
@@ -190,7 +192,7 @@ class LiveRunViewModel @Inject constructor(
     private fun startTimer() {
         timerJob = viewModelScope.launch {
             while (true) {
-                delay(1000L)
+                delay(TIMER_TICK_MS)
                 _elapsedTimeSeconds.update { it + 1 }
             }
         }

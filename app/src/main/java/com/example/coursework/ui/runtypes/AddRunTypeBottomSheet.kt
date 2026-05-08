@@ -21,6 +21,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 
+private const val MAX_NAME_LENGTH = 8
+private const val MAX_DISTANCE_METERS = 100_000
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddRunTypeBottomSheet (
@@ -46,8 +49,8 @@ fun AddRunTypeBottomSheet (
 
             OutlinedTextField(
                 value = name,
-                onValueChange = { 
-                    if (it.length <= 8) { // Prevent typing more than 8 chars
+                onValueChange = {
+                    if (it.length <= MAX_NAME_LENGTH) {
                         name = it
                         nameError = null // Clear error on typing
                     }
@@ -62,7 +65,7 @@ fun AddRunTypeBottomSheet (
                             color = MaterialTheme.colorScheme.error
                         )
                     } else {
-                        Text("${name.length}/8")
+                        Text("${name.length}/$MAX_NAME_LENGTH")
                     }
                 },
                 modifier = Modifier.fillMaxWidth()
@@ -121,8 +124,8 @@ private fun isValidName(trimmedName: String, onError: (String?) -> Unit): Boolea
             onError("Name cannot be empty")
             false
         }
-        trimmedName.length > 8 -> {
-            onError("Name must be 8 characters or less")
+        trimmedName.length > MAX_NAME_LENGTH -> {
+            onError("Name must be $MAX_NAME_LENGTH characters or less")
             false
         }
         else -> {
@@ -143,8 +146,8 @@ private fun isValidDistance(distanceStr: String, onError: (String?) -> Unit): Bo
             onError("Distance must be greater than 0")
             false
         }
-        distance > 100000 -> { // Cap at 100km for sanity
-            onError("Distance is too large (max 100,000m)")
+        distance > MAX_DISTANCE_METERS -> { // Cap at 100km for sanity
+            onError("Distance is too large (max ${MAX_DISTANCE_METERS}m)")
             false
         }
         else -> {
