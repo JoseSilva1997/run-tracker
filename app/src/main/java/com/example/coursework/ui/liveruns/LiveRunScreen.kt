@@ -402,7 +402,7 @@ internal fun MapView(
     pathPoints: List<LatLng>,
     currentLocation: LatLng?
 ) {
-    // Hold off composing GoogleMap until we actually have a fix. Otherwise
+    // Hold off composing GoogleMap until we actually have a location. Otherwise
     // the map renders at lat/lng (0,0) for a frame and then jumps to the
     // user's location, which looks jarring. Once set, this never reverts
     // back to null - subsequent updates are handled by the follow effect.

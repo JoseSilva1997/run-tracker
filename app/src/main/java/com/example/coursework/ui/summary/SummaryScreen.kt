@@ -1,21 +1,30 @@
 package com.example.coursework.ui.summary
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DirectionsRun
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -30,9 +39,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.coursework.domain.model.RunSession
@@ -40,6 +52,7 @@ import com.example.coursework.domain.model.RunType
 import com.example.coursework.domain.model.WeatherSnapshot
 import com.example.coursework.ui.theme.BgDark
 import com.example.coursework.ui.theme.BtnPrimary
+import com.example.coursework.ui.theme.BtnPrimaryBlue
 import com.example.coursework.ui.theme.TextPrimary
 import com.example.coursework.ui.theme.TextSecondary
 import com.example.coursework.util.calcs.CommonUtils
@@ -53,6 +66,9 @@ import java.util.Locale
 
 private val CARD_BG = Color(0xFF1E1E1E)
 private val DELETE_COLOR = Color(0xFFCE2029)
+private val TRAINING_ACCENT = BtnPrimary           // Green for training data card.
+private val WEATHER_ACCENT = BtnPrimaryBlue        // Blue for weather card.
+private val RUN_TYPE_ACCENT = Color(0xFFFFA500)    // Orange banner for run-type header.
 private const val MAP_HEIGHT_DP = 240
 private const val MAP_ZOOM = 15f
 private const val ROUTE_LINE_WIDTH = 12f
@@ -123,15 +139,34 @@ private fun ColumnScope.SummaryContent(
     runType: RunType?,
     pathPoints: List<LatLng>
 ) {
-    Text(
-        text = runType?.name ?: "Run",
-        color = TextPrimary,
-        style = MaterialTheme.typography.headlineMedium,
-        fontWeight = FontWeight.Bold
-    )
+    RunTypeBanner(name = runType?.name ?: "Run")
     RouteMap(pathPoints = pathPoints)
     TrainingDataCard(runSession = runSession)
     WeatherCard(weather = runSession.weatherSnapshot)
+}
+
+// Run type header. Icon + name, no background - keeps the top of the
+// screen quiet so the map and stat cards carry the visual weight.
+@Composable
+private fun RunTypeBanner(name: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = Icons.Default.DirectionsRun,
+            contentDescription = null,
+            tint = RUN_TYPE_ACCENT,
+            modifier = Modifier.size(32.dp)
+        )
+        Spacer(Modifier.width(10.dp))
+        Text(
+            text = name,
+            color = TextPrimary,
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold
+        )
+    }
 }
 
 @Composable
@@ -172,7 +207,11 @@ private fun RouteMap(pathPoints: List<LatLng>) {
 
 @Composable
 private fun TrainingDataCard(runSession: RunSession) {
-    StatsCard(title = "Training data") {
+    StatsCard(
+        title = "Training data",
+        accentColor = TRAINING_ACCENT,
+        icon = Icons.Default.FitnessCenter
+    ) {
         StatRow(
             label = "Total time",
             value = CommonUtils.getTimeAsString(runSession.durationSeconds)
@@ -189,7 +228,11 @@ private fun TrainingDataCard(runSession: RunSession) {
 
 @Composable
 private fun WeatherCard(weather: WeatherSnapshot?) {
-    StatsCard(title = "Weather") {
+    StatsCard(
+        title = "Weather",
+        accentColor = WEATHER_ACCENT,
+        icon = Icons.Default.WbSunny
+    ) {
         if (weather == null) {
             Text("No weather data", color = TextSecondary)
             return@StatsCard
@@ -215,9 +258,13 @@ private fun WeatherCard(weather: WeatherSnapshot?) {
     }
 }
 
+// Generic dark card with a colored accent header (icon + title + thin
+// underline bar). Caller picks the accent so each card reads distinctly.
 @Composable
 private fun StatsCard(
     title: String,
+    accentColor: Color,
+    icon: ImageVector,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Card(
@@ -229,11 +276,27 @@ private fun StatsCard(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(
-                text = title,
-                color = TextPrimary,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = accentColor,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = title,
+                    color = accentColor,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            // Thin colored divider so the header reads as its own band.
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(2.dp)
+                    .background(accentColor.copy(alpha = 0.4f))
             )
             content()
         }
