@@ -402,20 +402,47 @@ internal fun MapView(
     pathPoints: List<LatLng>,
     currentLocation: LatLng?
 ) {
-    val cameraPositionState = rememberCameraPositionState()
-
-    // 1. Initial camera placement: snap (no animation) to the first fix.
-    // Gated on pathPoints.isEmpty() so we only snap before tracking starts;
-    // once a route exists the follow effect below takes over.
+    // Hold off composing GoogleMap until we actually have a fix. Otherwise
+    // the map renders at lat/lng (0,0) for a frame and then jumps to the
+    // user's location, which looks jarring. Once set, this never reverts
+    // back to null - subsequent updates are handled by the follow effect.
+    var initialLocation by remember { mutableStateOf<LatLng?>(null) }
     LaunchedEffect(currentLocation) {
-        if (currentLocation != null && pathPoints.isEmpty()) {
-            cameraPositionState.move(
-                update = CameraUpdateFactory.newLatLngZoom(currentLocation, MAP_FOLLOW_ZOOM)
+        if (initialLocation == null && currentLocation != null) {
+            initialLocation = currentLocation
+        }
+    }
+
+    val anchor = initialLocation
+    if (anchor == null) {
+        // Placeholder while we wait for the first fix. BgDark matches the
+        // surrounding chrome so the gap reads as "loading", not "broken".
+        Box(modifier = modifier.background(BgDark))
+        return
+    }
+
+    // Initialize camera at the first known fix so the map appears already
+    // centered on the user instead of snapping over from (0,0).
+    val cameraPositionState = rememberCameraPositionState {
+        position = com.google.android.gms.maps.model.CameraPosition.fromLatLngZoom(
+            anchor,
+            MAP_FOLLOW_ZOOM
+        )
+    }
+
+    // Pre-tracking refinement: when currentLocation moves from the cached
+    // last-known fix to a fresh real fix, animate (don't snap) to it.
+    // Once tracking starts, pathPoints takes over via the follow effect.
+    LaunchedEffect(currentLocation) {
+        if (currentLocation != null && pathPoints.isEmpty() && currentLocation != anchor) {
+            cameraPositionState.animate(
+                update = CameraUpdateFactory.newLatLngZoom(currentLocation, MAP_FOLLOW_ZOOM),
+                durationMs = MAP_CAMERA_ANIMATION_MS
             )
         }
     }
 
-    // 2. Continuous follow: re-keys on the most recent point so the
+    // Continuous follow: re-keys on the most recent recorded point so the
     // camera animates smoothly along with the runner during tracking.
     LaunchedEffect(pathPoints.lastOrNull()) {
         pathPoints.lastOrNull()?.let { latestLocation ->
@@ -427,7 +454,7 @@ internal fun MapView(
     }
 
     // Re-create properties ONLY when the permission state changes
-    val mapProperties by remember (hasLocationPermission) {
+    val mapProperties by remember(hasLocationPermission) {
         mutableStateOf(
             MapProperties(isMyLocationEnabled = hasLocationPermission)
         )

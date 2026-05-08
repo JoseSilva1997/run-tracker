@@ -23,21 +23,31 @@ import kotlinx.coroutines.launch
 import java.util.Locale
 import javax.inject.Inject
 
-private const val LOCATION_UPDATE_INTERVAL_MS = 3000L
-private const val TIMER_TICK_MS = 1000L
-private const val PACE_DISPLAY_MIN_KM = 0.05f
+// Per-file tuning constants.
+private const val LOCATION_UPDATE_INTERVAL_MS = 3000L  // GPS poll cadence. Lower = more points, more battery.
+private const val TIMER_TICK_MS = 1000L                // Elapsed-time tick rate (1 Hz).
+private const val PACE_DISPLAY_MIN_KM = 0.05f          // Below this distance pace is mathematically meaningless.
 private const val SECONDS_PER_MINUTE = 60
 private const val SECONDS_PER_HOUR = 3600
 private const val METERS_PER_KM = 1000f
+// Reject fixes worse than this many meters of horizontal accuracy. Filters
+// out weak-signal noise that would otherwise inflate distance and zig-zag the path.
+private const val MAX_ACCURACY_METERS = 20f
+// Minimum movement between consecutive recorded points. Below this we
+// treat the fix as stationary GPS jitter and skip it entirely.
+private const val MIN_SEGMENT_METERS = 5f
 
+// Single source of truth consumed by LiveRunScreen. Holds the canonical
+// run state plus a few derived display strings. Co-located with the VM
+// per the project's UiState convention.
 data class LiveRunUiState(
     val hasLocationPermission: Boolean = false,
-    val isTracking: Boolean = false,
-    val isPaused: Boolean = false,
-    val targetDistanceMeters: Float = 0f,
+    val isTracking: Boolean = false,         // True between Start and End (regardless of pause).
+    val isPaused: Boolean = false,           // True only while user has the run paused.
+    val targetDistanceMeters: Float = 0f,    // 0 means no target; auto-finish disabled.
     val distanceMeters: Float = 0f,
     val elapsedTimeSeconds: Long = 0L,
-    val currentLocation: LatLng? = null,
+    val currentLocation: LatLng? = null,     // Latest fix shown on the map; updated even when paused / not tracking.
     val pathPoints: List<LatLng> = emptyList()
 ) {
     // Derived display strings. Pure functions of canonical fields; not part of
@@ -105,10 +115,28 @@ class LiveRunViewModel @Inject constructor(
     fun onLocationPermissionResult(isGranted: Boolean) {
         _uiState.update { it.copy(hasLocationPermission = isGranted) }
         if (isGranted && locationJob == null) {
+            // Seed currentLocation from the OS's cached last-known fix
+            // so the map can open already centered on the user instead
+            // of starting at (0,0) and snapping over.
+            seedLastKnownLocation()
             startLocationUpdates()
         }
     }
 
+    private fun seedLastKnownLocation() {
+        viewModelScope.launch {
+            val cached = locationTracker.getLastKnownLocation() ?: return@launch
+            // Don't overwrite a fresh fix if one beat us here.
+            _uiState.update { state ->
+                if (state.currentLocation != null) state
+                else state.copy(currentLocation = LatLng(cached.latitude, cached.longitude))
+            }
+        }
+    }
+
+    // Toggles between "not started" and "tracking". Called by LiveRunScreen
+    // after the START countdown finishes. End-of-run uses finishAndSaveRun
+    // instead, so the false branch here is mostly defensive.
     fun toggleTracking() {
         val willTrack = !_uiState.value.isTracking
         _uiState.update { it.copy(isTracking = willTrack, isPaused = false) }
@@ -122,20 +150,27 @@ class LiveRunViewModel @Inject constructor(
         }
     }
 
+    // Pause: stop the elapsed-time timer and ignore incoming fixes for
+    // distance/path. Location updates keep flowing so currentLocation
+    // stays fresh on the map.
     fun pauseTracking() {
         if (!_uiState.value.isTracking || _uiState.value.isPaused) return
         timerJob?.cancel()
         _uiState.update { it.copy(isPaused = true) }
     }
 
+    // Resume: re-seed lastTrackedPoint to the current location so the
+    // segment that spans the pause gap is NOT counted as distance, then
+    // restart the timer.
     fun resumeTracking() {
         if (!_uiState.value.isPaused) return
-        // Skip the gap so distance doesn't jump from where the user paused.
         lastTrackedPoint = _uiState.value.currentLocation
         _uiState.update { it.copy(isPaused = false) }
         startTimer()
     }
 
+    // Starts a long-running collection of location fixes. Job is cancelled
+    // in finishAndSaveRun() and onCleared() to avoid leaking the flow.
     private fun startLocationUpdates() {
         locationJob = viewModelScope.launch {
             locationTracker.getLocationUpdates(LOCATION_UPDATE_INTERVAL_MS).collect { locationPoint ->
@@ -144,14 +179,37 @@ class LiveRunViewModel @Inject constructor(
         }
     }
 
+    // Core ingest path for every GPS fix. Runs two filters before recording
+    // anything to avoid the inflated distance / zig-zag path that naive
+    // sampling produces. Off-tracking fixes still update currentLocation
+    // so the map's blue dot follows the user.
     private fun processLocationUpdate(runPoint: RunPoint) {
         val latLng = LatLng(runPoint.latitude, runPoint.longitude)
 
         if (_uiState.value.isTracking && !_uiState.value.isPaused) {
+            // Gate 1: drop low-accuracy fixes. Still update currentLocation
+            // so the map blue-dot stays roughly correct, but don't record.
+            if (runPoint.accuracy > MAX_ACCURACY_METERS) {
+                _uiState.update { it.copy(currentLocation = latLng) }
+                return
+            }
+
+            val previous = lastTrackedPoint
+            val segmentDistance = if (previous == null) 0f else distanceBetween(previous, latLng)
+
+            // Gate 2: skip sub-threshold movement. Leave lastTrackedPoint
+            // alone so the next valid fix measures from the old anchor -
+            // otherwise jitter creeps forward one tiny step at a time.
+            if (previous != null && segmentDistance < MIN_SEGMENT_METERS) {
+                _uiState.update { it.copy(currentLocation = latLng) }
+                return
+            }
+
             handleInitialWeatherFetch(runPoint.latitude, runPoint.longitude)
             runPointsToSave.add(runPoint)
+            lastTrackedPoint = latLng
 
-            val newDistance = computeNewDistance(latLng)
+            val newDistance = _uiState.value.distanceMeters + segmentDistance
             val target = _uiState.value.targetDistanceMeters
             val targetReached = target > 0 && newDistance >= target
             val cappedDistance = if (targetReached) target else newDistance
@@ -171,20 +229,20 @@ class LiveRunViewModel @Inject constructor(
         }
     }
 
-    private fun computeNewDistance(newLatLng: LatLng): Float {
-        val previous = lastTrackedPoint
-        lastTrackedPoint = newLatLng
-        if (previous == null) return _uiState.value.distanceMeters
-
+    // Pure haversine via the Android Location helper. Returns meters.
+    private fun distanceBetween(a: LatLng, b: LatLng): Float {
         val results = FloatArray(1)
         android.location.Location.distanceBetween(
-            previous.latitude, previous.longitude,
-            newLatLng.latitude, newLatLng.longitude,
+            a.latitude, a.longitude,
+            b.latitude, b.longitude,
             results
         )
-        return _uiState.value.distanceMeters + results[0]
+        return results[0]
     }
 
+    // Weather is captured exactly once per run, lazily on the first
+    // recorded fix. Latching with hasFetchedWeather avoids extra API hits
+    // and keeps the snapshot tied to where the run actually began.
     private fun handleInitialWeatherFetch(lat: Double, lng: Double) {
         if (!hasFetchedWeather) {
             hasFetchedWeather = true
@@ -199,6 +257,10 @@ class LiveRunViewModel @Inject constructor(
         }
     }
 
+    // End of run: stop timers, persist the session + collected points,
+    // then emit the one-shot navigation event so the screen can move on
+    // to Summary. Triggered manually (END button) or automatically when
+    // the configured target distance is reached.
     fun finishAndSaveRun() {
         _uiState.update { it.copy(isTracking = false, isPaused = false) }
         locationJob?.cancel()
@@ -218,6 +280,11 @@ class LiveRunViewModel @Inject constructor(
         }
     }
 
+    // Simple 1Hz wall-clock counter. Independent of GPS cadence so the
+    // displayed time advances smoothly even when fixes are sparse.
+    // Counting ticks (rather than reading System.currentTimeMillis at
+    // each emit) keeps pause/resume trivial: cancel restarts the count
+    // from where it left off.
     private fun startTimer() {
         timerJob = viewModelScope.launch {
             while (true) {
@@ -227,6 +294,9 @@ class LiveRunViewModel @Inject constructor(
         }
     }
 
+    // Defensive cleanup. Both jobs are also cancelled in finishAndSaveRun;
+    // this guards the case where the screen is destroyed mid-run (process
+    // death, back navigation before End is pressed, etc.).
     override fun onCleared() {
         super.onCleared()
         locationJob?.cancel()

@@ -12,7 +12,9 @@ import com.google.android.gms.location.Priority
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.suspendCancellableCoroutine
 import javax.inject.Inject
+import kotlin.coroutines.resume
 
 class LocationTrackerImpl @Inject constructor(
     private val fusedLocationClient: FusedLocationProviderClient
@@ -52,5 +54,22 @@ class LocationTrackerImpl @Inject constructor(
                 fusedLocationClient.removeLocationUpdates(locationCallback)
             }
         }
+    }
+
+    @SuppressLint("MissingPermission")
+    override suspend fun getLastKnownLocation(): RunPoint? = suspendCancellableCoroutine { cont ->
+        fusedLocationClient.lastLocation
+            .addOnSuccessListener { location ->
+                val point = location?.let {
+                    RunPoint(
+                        latitude = it.latitude,
+                        longitude = it.longitude,
+                        accuracy = it.accuracy,
+                        timestamp = it.time
+                    )
+                }
+                cont.resume(point)
+            }
+            .addOnFailureListener { cont.resume(null) }
     }
 }
