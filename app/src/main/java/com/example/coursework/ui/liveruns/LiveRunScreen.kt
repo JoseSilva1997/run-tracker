@@ -68,21 +68,19 @@ fun LiveRunScreen(
     onRunFinished: (Long) -> Unit,
     viewModel: LiveRunViewModel = hiltViewModel()
 ) {
-    val hasLocationPermission by viewModel.hasLocationPermission.collectAsStateWithLifecycle()
-    val isTracking by viewModel.isTracking.collectAsStateWithLifecycle()
-    val pathPoints by viewModel.pathPoints.collectAsStateWithLifecycle()
-    val currentLocation by viewModel.currentLocation.collectAsStateWithLifecycle()
-    val elapsedTime by viewModel.elapsedTimeSeconds.collectAsStateWithLifecycle()
-    val distance by viewModel.distanceMeters.collectAsStateWithLifecycle()
-    val savedRunId by viewModel.savedRunId.collectAsStateWithLifecycle()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val hasLocationPermission = state.hasLocationPermission
+    val isTracking = state.isTracking
+    val pathPoints = state.pathPoints
+    val currentLocation = state.currentLocation
+    val elapsedTime = state.elapsedTimeSeconds
+    val distance = state.distanceMeters
 
     val context = LocalContext.current
 
-    // Get run id when finished
-    LaunchedEffect(savedRunId) {
-        savedRunId?.let { id ->
-            onRunFinished(id)
-        }
+    // One-shot run-finished event; never replays after recomposition.
+    LaunchedEffect(Unit) {
+        viewModel.runFinishedEvent.collect { id -> onRunFinished(id) }
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(
