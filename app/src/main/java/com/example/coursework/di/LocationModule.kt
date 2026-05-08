@@ -6,6 +6,7 @@ import com.example.coursework.data.location.LocationTrackerImpl
 import com.example.coursework.domain.locationtracker.LocationTracker
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
+import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -13,6 +14,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
+// Provides the third-party FusedLocationProviderClient (no @Inject constructor available).
 @Module
 @InstallIn(SingletonComponent::class)
 object LocationModule {
@@ -24,12 +26,13 @@ object LocationModule {
     ): FusedLocationProviderClient {
         return LocationServices.getFusedLocationProviderClient(context)
     }
+}
 
-    @Provides
+// Binds LocationTracker -> LocationTrackerImpl
+@Module
+@InstallIn(SingletonComponent::class)
+abstract class LocationTrackerBindings {
+    @Binds
     @Singleton
-    fun provideLocationTracker(
-        fusedLocationProviderClient: FusedLocationProviderClient
-    ): LocationTracker {
-        return LocationTrackerImpl(fusedLocationProviderClient)
-    }
+    abstract fun bindLocationTracker(impl: LocationTrackerImpl): LocationTracker
 }

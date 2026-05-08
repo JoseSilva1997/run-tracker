@@ -12,8 +12,9 @@ import com.google.android.gms.location.Priority
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import javax.inject.Inject
 
-class LocationTrackerImpl(
+class LocationTrackerImpl @Inject constructor(
     private val fusedLocationClient: FusedLocationProviderClient
 ) : LocationTracker {
 
