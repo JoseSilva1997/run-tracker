@@ -68,6 +68,10 @@ private const val MAP_FOLLOW_ZOOM = 17f                // Street-level zoom whil
 private const val MAP_CAMERA_ANIMATION_MS = 1000       // Smooth pan duration when following new fixes.
 private const val COUNTDOWN_START = 3                  // Pre-run countdown begins at this number.
 private const val COUNTDOWN_TICK_MS = 1000L            // One second between countdown decrements.
+// Delay GoogleMap inflation so navigation transition can finish first.
+// MapView's native/GL surface is expensive to inflate on first launch
+// and freezes the main thread mid-transition without this gate.
+private const val MAP_INFLATE_DELAY_MS = 200L
 
 @Composable
 fun LiveRunScreen(
@@ -402,39 +406,30 @@ internal fun MapView(
     pathPoints: List<LatLng>,
     currentLocation: LatLng?
 ) {
-    // Hold off composing GoogleMap until we actually have a location. Otherwise
-    // the map renders at lat/lng (0,0) for a frame and then jumps to the
-    // user's location, which looks jarring. Once set, this never reverts
-    // back to null - subsequent updates are handled by the follow effect.
-    var initialLocation by remember { mutableStateOf<LatLng?>(null) }
-    LaunchedEffect(currentLocation) {
-        if (initialLocation == null && currentLocation != null) {
-            initialLocation = currentLocation
-        }
+    // Defer the heavy GoogleMap inflation until after the navigation
+    // transition completes. First-launch MapView creation can stall the
+    // main thread for several hundred ms; without this gate the dashboard
+    // -> LiveRunScreen transition freezes.
+    var inflateMap by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(MAP_INFLATE_DELAY_MS)
+        inflateMap = true
     }
 
-    val anchor = initialLocation
-    if (anchor == null) {
-        // Placeholder while we wait for the first fix. BgDark matches the
-        // surrounding chrome so the gap reads as "loading", not "broken".
+    if (!inflateMap) {
+        // Brief placeholder while the inflation gate is closed. BgDark
+        // matches the surrounding chrome so the gap reads as "loading".
         Box(modifier = modifier.background(BgDark))
         return
     }
 
-    // Initialize camera at the first known fix so the map appears already
-    // centered on the user instead of snapping over from (0,0).
-    val cameraPositionState = rememberCameraPositionState {
-        position = com.google.android.gms.maps.model.CameraPosition.fromLatLngZoom(
-            anchor,
-            MAP_FOLLOW_ZOOM
-        )
-    }
+    val cameraPositionState = rememberCameraPositionState()
 
-    // Pre-tracking refinement: when currentLocation moves from the cached
-    // last-known fix to a fresh real fix, animate (don't snap) to it.
+    // Animate the camera to the user the first time we get a location, and
+    // every time it changes pre-tracking (cached last-known -> real fix).
     // Once tracking starts, pathPoints takes over via the follow effect.
     LaunchedEffect(currentLocation) {
-        if (currentLocation != null && pathPoints.isEmpty() && currentLocation != anchor) {
+        if (currentLocation != null && pathPoints.isEmpty()) {
             cameraPositionState.animate(
                 update = CameraUpdateFactory.newLatLngZoom(currentLocation, MAP_FOLLOW_ZOOM),
                 durationMs = MAP_CAMERA_ANIMATION_MS
