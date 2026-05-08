@@ -8,4 +8,5 @@ interface RunRepository {
     suspend fun saveRun(runSession: RunSession, points: List<RunPoint>): Long
     suspend fun getRunDetails(runId: Long): Pair<RunSession, List<RunPoint>>
     fun getAllRuns(): Flow<List<RunSession>>
+    suspend fun deleteRun(runId: Long)
 }

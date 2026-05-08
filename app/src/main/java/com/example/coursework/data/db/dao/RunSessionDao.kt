@@ -25,4 +25,7 @@ interface RunSessionDao {
     @Transaction
     @Query("SELECT * FROM run_sessions ORDER BY timestamp DESC")
     fun getAllRunSessionsWithPoints(): Flow<List<RunSessionWithPoints>>
+
+    @Query("DELETE FROM run_sessions WHERE runId = :runId")
+    suspend fun deleteRunSession(runId: Long)
 }

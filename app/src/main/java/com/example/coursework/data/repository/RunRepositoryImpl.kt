@@ -40,6 +40,10 @@ class RunRepositoryImpl @Inject constructor(
         return Pair(sessionDomain, pointsDomain)
     }
 
+    override suspend fun deleteRun(runId: Long) {
+        runSessionDao.deleteRunSession(runId)
+    }
+
     override fun getAllRuns(): Flow<List<RunSession>> {
         return runSessionDao.getAllRunSessionsWithPoints().map { list ->
             list.map { it.runSession.toDomain() }
