@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.Locale
 import javax.inject.Inject
 
@@ -36,6 +37,10 @@ private const val MAX_ACCURACY_METERS = 20f
 // Minimum movement between consecutive recorded points. Below this we
 // treat the fix as stationary GPS jitter and skip it entirely.
 private const val MIN_SEGMENT_METERS = 5f
+// On a short run the weather fetch may not have completed by the time
+// the user hits End. Wait up to this long before giving up and saving
+// the session with a null weather snapshot.
+private const val WEATHER_WAIT_MS = 3000L
 
 // Single source of truth consumed by LiveRunScreen. Holds the canonical
 // run state plus a few derived display strings. Co-located with the VM
@@ -104,6 +109,7 @@ class LiveRunViewModel @Inject constructor(
 
     private var locationJob: Job? = null
     private var timerJob: Job? = null
+    private var weatherJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -141,9 +147,17 @@ class LiveRunViewModel @Inject constructor(
         val willTrack = !_uiState.value.isTracking
         _uiState.update { it.copy(isTracking = willTrack, isPaused = false) }
         if (willTrack) {
-            // Seed distance baseline with the most recent fix so the first recorded
-            // segment is measured from where the user actually pressed Start.
-            lastTrackedPoint = _uiState.value.currentLocation
+            // Null seed so the first incoming fix is always recorded (gates
+            // skip the previous!=null branch). Without this a short run
+            // could end with an empty path because every early fix sat
+            // within MIN_SEGMENT_METERS of the seed.
+            lastTrackedPoint = null
+            // Start the weather fetch immediately using whatever location
+            // we have. On short runs this may be the only chance to
+            // capture the snapshot before the user hits End.
+            _uiState.value.currentLocation?.let { loc ->
+                handleInitialWeatherFetch(loc.latitude, loc.longitude)
+            }
             startTimer()
         } else {
             timerJob?.cancel()
@@ -251,7 +265,9 @@ class LiveRunViewModel @Inject constructor(
     }
 
     private fun fetchWeatherAsync(lat: Double, lon: Double) {
-        viewModelScope.launch {
+        // Track the job so finishAndSaveRun can wait briefly for in-flight
+        // requests instead of saving the session with a null snapshot.
+        weatherJob = viewModelScope.launch {
             // Fails silently and leaves weatherSnapshot as null if offline.
             weatherSnapshot = weatherRepository.getWeatherAtLocation(lat, lon)
         }
@@ -267,6 +283,12 @@ class LiveRunViewModel @Inject constructor(
         timerJob?.cancel()
 
         viewModelScope.launch {
+            // Give an in-flight weather fetch a moment to finish so short
+            // runs still get a snapshot. Falls through after the timeout
+            // and saves with whatever weatherSnapshot currently holds.
+            weatherJob?.let { job ->
+                withTimeoutOrNull(WEATHER_WAIT_MS) { job.join() }
+            }
             val state = _uiState.value
             val session = RunSession(
                 runTypeId = runTypeId,
