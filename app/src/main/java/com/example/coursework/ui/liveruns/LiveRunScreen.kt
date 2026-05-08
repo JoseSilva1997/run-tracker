@@ -2,6 +2,7 @@ package com.example.coursework.ui.liveruns
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.speech.tts.TextToSpeech
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -33,6 +34,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -61,10 +63,11 @@ import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberCameraPositionState
 
-private const val MAP_FOLLOW_ZOOM = 17f
-private const val MAP_CAMERA_ANIMATION_MS = 1000
-private const val COUNTDOWN_START = 3
-private const val COUNTDOWN_TICK_MS = 1000L
+// Per-file UI tuning constants.
+private const val MAP_FOLLOW_ZOOM = 17f                // Street-level zoom while tracking the runner.
+private const val MAP_CAMERA_ANIMATION_MS = 1000       // Smooth pan duration when following new fixes.
+private const val COUNTDOWN_START = 3                  // Pre-run countdown begins at this number.
+private const val COUNTDOWN_TICK_MS = 1000L            // One second between countdown decrements.
 
 @Composable
 fun LiveRunScreen(
@@ -74,36 +77,62 @@ fun LiveRunScreen(
     viewModel: LiveRunViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    var countdown by remember { mutableStateOf<Int?>(null) }
 
+    // Pre-run countdown overlay state. Null = hidden. When non-null it
+    // ticks 3 -> 2 -> 1 -> null, and the run starts on the transition to null.
+    var countdown by remember { mutableStateOf<Int?>(null) }
+    val context = LocalContext.current
+
+    // TextToSpeech instance lives for the lifetime of this screen. We stash
+    // the reference in state so the countdown effect can speak each tick,
+    // and shut it down via DisposableEffect to avoid leaking the engine.
+    var tts by remember { mutableStateOf<TextToSpeech?>(null) }
+    DisposableEffect(Unit) {
+        val instance = TextToSpeech(context) { /* default language is fine */ }
+        tts = instance
+        onDispose {
+            instance.stop()
+            instance.shutdown()
+        }
+    }
+
+    // Countdown FSM. Each state change speaks one number (or "Go") and
+    // waits one second. Re-keying on `countdown` cancels the previous
+    // coroutine if state changes early (e.g. the user navigates away).
     LaunchedEffect(countdown) {
         val current = countdown ?: return@LaunchedEffect
+        tts?.speak(current.toString(), TextToSpeech.QUEUE_FLUSH, null, null)
+        delay(COUNTDOWN_TICK_MS)
         if (current > 1) {
-            delay(COUNTDOWN_TICK_MS)
             countdown = current - 1
         } else {
-            delay(COUNTDOWN_TICK_MS)
+            // Final tick: speak "Go", flip the VM into tracking mode, hide overlay.
+            tts?.speak("Go", TextToSpeech.QUEUE_FLUSH, null, null)
             viewModel.toggleTracking()
             countdown = null
         }
     }
 
-    val context = LocalContext.current
-
     // One-shot run-finished event; never replays after recomposition.
+    // Collected inside a LaunchedEffect so navigation only fires once.
     LaunchedEffect(Unit) {
         viewModel.runFinishedEvent.collect { id -> onRunFinished(id) }
     }
 
+    // Result handler for the system permission dialog. We accept either
+    // fine OR coarse location: coarse still gives us a usable track, just
+    // less precise, and the user may legitimately deny fine.
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
-        // Check if either fine or coarse location was granted
         val isGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
                 permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
         viewModel.onLocationPermissionResult(isGranted)
     }
 
+    // First composition: check existing grants. If we already have one,
+    // tell the VM directly. Otherwise prompt for both at once so the user
+    // only sees a single system dialog.
     LaunchedEffect(Unit) {
         val hasFineLocation = ContextCompat.checkSelfPermission(
             context,
@@ -128,6 +157,12 @@ fun LiveRunScreen(
         }
     }
 
+    // Outer Box stacks layered overlays. Z-order back -> front:
+    //   1. Column with stats card + map area
+    //   2. Pause scrim (only when paused)
+    //   3. RunControl buttons (always interactive on top of map/scrim)
+    //   4. Countdown overlay (covers everything during pre-run countdown)
+    //   5. Close icon (always reachable, top-left)
     Scaffold(
         containerColor = BgDark
     ) { padding ->
@@ -369,8 +404,9 @@ internal fun MapView(
 ) {
     val cameraPositionState = rememberCameraPositionState()
 
-    // 1. Initial Camera Setup:
-    // Snap to the user's location immediately on the first coordinate
+    // 1. Initial camera placement: snap (no animation) to the first fix.
+    // Gated on pathPoints.isEmpty() so we only snap before tracking starts;
+    // once a route exists the follow effect below takes over.
     LaunchedEffect(currentLocation) {
         if (currentLocation != null && pathPoints.isEmpty()) {
             cameraPositionState.move(
@@ -379,8 +415,8 @@ internal fun MapView(
         }
     }
 
-    // 2. Continuous Tracking Camera Setup:
-    // Follow the runner while tracking is active
+    // 2. Continuous follow: re-keys on the most recent point so the
+    // camera animates smoothly along with the runner during tracking.
     LaunchedEffect(pathPoints.lastOrNull()) {
         pathPoints.lastOrNull()?.let { latestLocation ->
             cameraPositionState.animate(
@@ -425,6 +461,11 @@ internal fun MapView(
 }
 
 
+// Three-state run control. Renders one of:
+//   - START button     (run not yet started)
+//   - PAUSE icon       (run active and not paused)
+//   - END + RESUME     (run paused; user picks one)
+// Caller owns the actual VM calls; this composable is purely presentational.
 @Composable
 internal fun RunControl(
     modifier: Modifier = Modifier,
@@ -472,6 +513,9 @@ internal fun RunControl(
     }
 }
 
+// Big circular text button (START) wrapped in two translucent halo
+// rings to give the button visual weight against the map. Sizes are
+// hierarchical: 140dp outer halo > 116dp inner halo > 92dp button.
 @Composable
 private fun PrimaryRunButton(
     modifier: Modifier = Modifier,
@@ -483,11 +527,13 @@ private fun PrimaryRunButton(
         modifier = modifier,
         contentAlignment = Alignment.Center
     ) {
+        // Outer halo (faintest)
         Surface(
             modifier = Modifier.size(140.dp),
             shape = RoundedCornerShape(100.dp),
             color = color.copy(alpha = 0.1f)
         ) {}
+        // Inner halo (slightly stronger)
         Surface(
             modifier = Modifier.size(116.dp),
             shape = RoundedCornerShape(100.dp),
@@ -510,6 +556,8 @@ private fun PrimaryRunButton(
     }
 }
 
+// Same halo shape as PrimaryRunButton but renders an icon instead of text.
+// Used for the PAUSE state so the user sees the universal "two bars" glyph.
 @Composable
 private fun PrimaryRunIconButton(
     modifier: Modifier = Modifier,
@@ -549,6 +597,9 @@ private fun PrimaryRunIconButton(
     }
 }
 
+// Smaller circular icon button with a white text label floating above.
+// Used for the END / RESUME pair shown when paused. No haloes - the
+// pause-state scrim already gives these buttons enough contrast.
 @Composable
 private fun LabeledIconButton(
     label: String,
