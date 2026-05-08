@@ -37,6 +37,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -61,6 +63,8 @@ import com.google.maps.android.compose.rememberCameraPositionState
 
 private const val MAP_FOLLOW_ZOOM = 17f
 private const val MAP_CAMERA_ANIMATION_MS = 1000
+private const val COUNTDOWN_START = 3
+private const val COUNTDOWN_TICK_MS = 1000L
 
 @Composable
 fun LiveRunScreen(
@@ -70,6 +74,19 @@ fun LiveRunScreen(
     viewModel: LiveRunViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    var countdown by remember { mutableStateOf<Int?>(null) }
+
+    LaunchedEffect(countdown) {
+        val current = countdown ?: return@LaunchedEffect
+        if (current > 1) {
+            delay(COUNTDOWN_TICK_MS)
+            countdown = current - 1
+        } else {
+            delay(COUNTDOWN_TICK_MS)
+            viewModel.toggleTracking()
+            countdown = null
+        }
+    }
 
     val context = LocalContext.current
 
@@ -176,11 +193,28 @@ fun LiveRunScreen(
                     .padding(bottom = 50.dp),
                 isTracking = state.isTracking,
                 isPaused = state.isPaused,
-                onStart = { viewModel.toggleTracking() },
+                onStart = { if (countdown == null) countdown = COUNTDOWN_START },
                 onPause = { viewModel.pauseTracking() },
                 onResume = { viewModel.resumeTracking() },
                 onEnd = { viewModel.finishAndSaveRun() }
             )
+
+            // Countdown overlay
+            countdown?.let { value ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.85f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = value.toString(),
+                        color = Color.White,
+                        fontSize = 180.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
 
             // Close Button "x"
             IconButton(
@@ -336,12 +370,11 @@ internal fun MapView(
     val cameraPositionState = rememberCameraPositionState()
 
     // 1. Initial Camera Setup:
-    // Animate to the user's location as soon as we get the first coordinate
+    // Snap to the user's location immediately on the first coordinate
     LaunchedEffect(currentLocation) {
         if (currentLocation != null && pathPoints.isEmpty()) {
-            cameraPositionState.animate(
-                update = CameraUpdateFactory.newLatLngZoom(currentLocation, MAP_FOLLOW_ZOOM),
-                durationMs = MAP_CAMERA_ANIMATION_MS
+            cameraPositionState.move(
+                update = CameraUpdateFactory.newLatLngZoom(currentLocation, MAP_FOLLOW_ZOOM)
             )
         }
     }
