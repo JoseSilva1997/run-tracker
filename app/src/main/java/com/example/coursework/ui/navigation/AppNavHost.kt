@@ -6,89 +6,166 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
-import com.example.coursework.ui.dashboard.DashboardScreen
-import com.example.coursework.ui.dashboard.DashboardViewModel
-import com.example.coursework.ui.runtypes.AddRunTypeViewModel
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import androidx.navigation.navigation
+import com.example.coursework.ui.dashboard.DashboardScreen
+import com.example.coursework.ui.dashboard.DashboardViewModel
+import com.example.coursework.ui.history.HistoryScreen
 import com.example.coursework.ui.liveruns.LiveRunScreen
+import com.example.coursework.ui.runtypes.AddRunTypeViewModel
+import com.example.coursework.ui.runtypes.RunTypePickerBottomSheet
 import com.example.coursework.ui.summary.SummaryScreen
 import com.example.coursework.ui.theme.BgDark
-import androidx.navigation.NavType
-import androidx.navigation.navArgument
 
+private const val MAIN_GRAPH_ROUTE = "main"
+private const val DASHBOARD_ROUTE = "dashboard"
+private const val HISTORY_ROUTE = "history"
 
 @Composable
 fun AppNavHost() {
     val navController = rememberNavController()
-    NavHost(
-        navController,
-        startDestination = "dashboard",
-        modifier = Modifier
-            .background(BgDark)
-            .padding(top = 16.dp)
-            .safeDrawingPadding()
-    ) {
-        composable("dashboard") {
-            val vm: DashboardViewModel = hiltViewModel()
-            val addRunTypeVm: AddRunTypeViewModel = hiltViewModel()
-            val runTypes by vm.runTypes.collectAsState()
-            val selectedRunType by vm.selectedRunType.collectAsState()
+    val backStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = backStackEntry?.destination?.route
+    val isTabRoute = currentRoute == DASHBOARD_ROUTE || currentRoute == HISTORY_ROUTE
 
-            val filterOptions = listOf("All") + runTypes.map { it.name }
-
-            DashboardScreen(
-                filterOptions = filterOptions,
-                startRunOptions = runTypes,
-                selectedRunTypeName = selectedRunType,
-                onStartRunSelected = { runType ->
-                    val encodedName = Uri.encode(runType.name)
-                    navController.navigate("liveRun/${runType.id}/$encodedName")
-                },
-                onFilterSelected = {},// Placeholder until filtering is implemented
-                onRunTypeSelected = { vm.onRunTypeSelected(it) },
-                onAddNewRunType = { name, distance ->
-                    addRunTypeVm.addRunType(name, distance)
-                }
-            )
+    // Shared dashboard VM scoped to the main tab graph so the pill (in shell) and
+    // dashboard composable see the same selected run type.
+    val sharedVm: DashboardViewModel? = if (isTabRoute) {
+        val parentEntry: NavBackStackEntry = remember(backStackEntry) {
+            navController.getBackStackEntry(MAIN_GRAPH_ROUTE)
         }
+        hiltViewModel(parentEntry)
+    } else null
 
-        composable(
-            route = "liveRun/{runTypeId}/{runTypeName}",
-            arguments = listOf(
-                navArgument("runTypeId") { type = NavType.LongType },
-                navArgument("runTypeName") { type = NavType.StringType }
-            )
-        ) { backStackEntry ->
-            val runTypeName = backStackEntry.arguments?.getString("runTypeName") ?: ""
-            LiveRunScreen(
-                runTypeName = runTypeName,
-                onClose = { navController.popBackStack() },
-                onRunFinished = { runId ->
-                    navController.navigate("summary/$runId")
-                }
-            )
+    val runTypes by (sharedVm?.runTypes?.collectAsState()
+        ?: remember { mutableStateOf(emptyList()) })
+    val selectedRunType by (sharedVm?.selectedRunType?.collectAsState()
+        ?: remember { mutableStateOf("") })
+
+    var showPicker by remember { mutableStateOf(false) }
+    var pickerRequestAddRunType by remember { mutableStateOf(false) }
+
+    MainShell(
+        showChrome = isTabRoute,
+        currentRoute = currentRoute,
+        selectedRunTypeName = selectedRunType,
+        canStart = runTypes.isNotEmpty() && selectedRunType.isNotBlank(),
+        onTabSelected = { tab ->
+            if (currentRoute == tab.route) return@MainShell
+            navController.navigate(tab.route) {
+                popUpTo(MAIN_GRAPH_ROUTE) { saveState = true }
+                launchSingleTop = true
+                restoreState = true
+            }
+        },
+        onSelectRunType = { showPicker = true },
+        onStartRun = {
+            runTypes.firstOrNull { it.name == selectedRunType }?.let { rt ->
+                navController.navigate("liveRun/${rt.id}/${Uri.encode(rt.name)}")
+            }
         }
-
-        composable(
-            route = "summary/{runId}",
-            arguments = listOf(
-                navArgument("runId") { type = NavType.LongType }
-            )
+    ) { shellPadding ->
+        NavHost(
+            navController = navController,
+            startDestination = MAIN_GRAPH_ROUTE,
+            modifier = Modifier
+                .background(BgDark)
+                .padding(shellPadding)
+                .padding(top = 16.dp)
+                .safeDrawingPadding()
         ) {
-            SummaryScreen(
-                onDone = {
-                    navController.navigate("dashboard") {
-                        popUpTo("dashboard") { inclusive = true }
-                    }
-                }
-            )
-        }
+            navigation(route = MAIN_GRAPH_ROUTE, startDestination = DASHBOARD_ROUTE) {
+                composable(DASHBOARD_ROUTE) {
+                    val parentEntry = remember(it) { navController.getBackStackEntry(MAIN_GRAPH_ROUTE) }
+                    val vm: DashboardViewModel = hiltViewModel(parentEntry)
+                    val addRunTypeVm: AddRunTypeViewModel = hiltViewModel()
+                    val rts by vm.runTypes.collectAsState()
+                    val filterOptions = listOf("All") + rts.map { it.name }
 
+                    DashboardScreen(
+                        filterOptions = filterOptions,
+                        onFilterSelected = {},
+                        onAddNewRunType = { name, distance ->
+                            addRunTypeVm.addRunType(name, distance)
+                        }
+                    )
+                }
+                composable(HISTORY_ROUTE) {
+                    HistoryScreen(contentPadding = shellPadding)
+                }
+            }
+
+            composable(
+                route = "liveRun/{runTypeId}/{runTypeName}",
+                arguments = listOf(
+                    navArgument("runTypeId") { type = NavType.LongType },
+                    navArgument("runTypeName") { type = NavType.StringType }
+                )
+            ) { backStackEntry ->
+                val runTypeName = backStackEntry.arguments?.getString("runTypeName") ?: ""
+                LiveRunScreen(
+                    runTypeName = runTypeName,
+                    onClose = { navController.popBackStack() },
+                    onRunFinished = { runId ->
+                        navController.navigate("summary/$runId")
+                    }
+                )
+            }
+
+            composable(
+                route = "summary/{runId}",
+                arguments = listOf(
+                    navArgument("runId") { type = NavType.LongType }
+                )
+            ) {
+                SummaryScreen(
+                    onDone = {
+                        navController.navigate(DASHBOARD_ROUTE) {
+                            popUpTo(MAIN_GRAPH_ROUTE) { inclusive = true }
+                        }
+                    }
+                )
+            }
+        }
+    }
+
+    if (showPicker && sharedVm != null) {
+        RunTypePickerBottomSheet(
+            options = runTypes,
+            selectedRunTypeName = selectedRunType,
+            onRunTypeSelected = {
+                sharedVm.onRunTypeSelected(it)
+                showPicker = false
+            },
+            onAddRunType = {
+                showPicker = false
+                pickerRequestAddRunType = true
+            },
+            onDismiss = { showPicker = false }
+        )
+    }
+
+    // Forward "add run type" request from picker into the dashboard's add sheet flow.
+    if (pickerRequestAddRunType) {
+        val addRunTypeVm: AddRunTypeViewModel = hiltViewModel()
+        com.example.coursework.ui.runtypes.AddRunTypeBottomSheet(
+            onSave = { name, distance ->
+                addRunTypeVm.addRunType(name, distance)
+            },
+            onDismiss = { pickerRequestAddRunType = false }
+        )
     }
 }
