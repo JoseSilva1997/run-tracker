@@ -93,7 +93,7 @@ private fun SummaryContent(
     val statLines = listOf(
         "Run Type: ${runType?.name ?: "Unknown"}",
         "Duration Minutes: ${CommonUtils.getTimeInMinutesAsAString(runSession.durationSeconds)}",
-        "Distance Meters: ${String.format(Locale.getDefault(), "%.2f", runSession.totalDistanceMeters)} min",
+        "Distance Meters: ${String.format(Locale.getDefault(), "%.2f", runSession.totalDistanceMeters)} meters",
         "Timestamp: $dateText",
         "Temperature C: ${weather?.temperatureC?.toString() ?: "N/A"}",
         "Condition: ${weather?.conditionText ?: "N/A"}",

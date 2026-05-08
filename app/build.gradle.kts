@@ -41,6 +41,14 @@ android {
     composeOptions {
         kotlinCompilerExtensionVersion = "2.0.21"
     }
+
+    sourceSets {
+        getByName("androidTest").assets.directories.add("$projectDir/schemas")
+    }
+}
+
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
 }
 
 dependencies {

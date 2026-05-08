@@ -1,5 +1,6 @@
 package com.example.coursework.di
 
+import com.example.coursework.BuildConfig
 import com.example.coursework.data.network.WeatherApi
 import dagger.Module
 import dagger.Provides
@@ -20,9 +21,14 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideRetrofit(): Retrofit {
-        // Create an interceptor and set it to log the full body
+        // Full body logging only in debug. Release builds stay silent so the
+        // OpenWeather API key (sent as a query param) never lands in Logcat.
         val logging = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
+            level = if (BuildConfig.DEBUG) {
+                HttpLoggingInterceptor.Level.BODY
+            } else {
+                HttpLoggingInterceptor.Level.NONE
+            }
         }
 
         // Add the interceptor to the client
