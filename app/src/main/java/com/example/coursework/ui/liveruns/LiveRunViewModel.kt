@@ -33,6 +33,7 @@ private const val METERS_PER_KM = 1000f
 data class LiveRunUiState(
     val hasLocationPermission: Boolean = false,
     val isTracking: Boolean = false,
+    val isPaused: Boolean = false,
     val targetDistanceMeters: Float = 0f,
     val distanceMeters: Float = 0f,
     val elapsedTimeSeconds: Long = 0L,
@@ -110,7 +111,7 @@ class LiveRunViewModel @Inject constructor(
 
     fun toggleTracking() {
         val willTrack = !_uiState.value.isTracking
-        _uiState.update { it.copy(isTracking = willTrack) }
+        _uiState.update { it.copy(isTracking = willTrack, isPaused = false) }
         if (willTrack) {
             // Seed distance baseline with the most recent fix so the first recorded
             // segment is measured from where the user actually pressed Start.
@@ -119,6 +120,20 @@ class LiveRunViewModel @Inject constructor(
         } else {
             timerJob?.cancel()
         }
+    }
+
+    fun pauseTracking() {
+        if (!_uiState.value.isTracking || _uiState.value.isPaused) return
+        timerJob?.cancel()
+        _uiState.update { it.copy(isPaused = true) }
+    }
+
+    fun resumeTracking() {
+        if (!_uiState.value.isPaused) return
+        // Skip the gap so distance doesn't jump from where the user paused.
+        lastTrackedPoint = _uiState.value.currentLocation
+        _uiState.update { it.copy(isPaused = false) }
+        startTimer()
     }
 
     private fun startLocationUpdates() {
@@ -132,7 +147,7 @@ class LiveRunViewModel @Inject constructor(
     private fun processLocationUpdate(runPoint: RunPoint) {
         val latLng = LatLng(runPoint.latitude, runPoint.longitude)
 
-        if (_uiState.value.isTracking) {
+        if (_uiState.value.isTracking && !_uiState.value.isPaused) {
             handleInitialWeatherFetch(runPoint.latitude, runPoint.longitude)
             runPointsToSave.add(runPoint)
 
@@ -185,7 +200,7 @@ class LiveRunViewModel @Inject constructor(
     }
 
     fun finishAndSaveRun() {
-        _uiState.update { it.copy(isTracking = false) }
+        _uiState.update { it.copy(isTracking = false, isPaused = false) }
         locationJob?.cancel()
         timerJob?.cancel()
 

@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +19,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -152,14 +156,31 @@ fun LiveRunScreen(
                         .fillMaxWidth(),
                     runTypeName = runTypeName,
                     hasLocationPermission = state.hasLocationPermission,
-                    isTracking = state.isTracking,
                     pathPoints = state.pathPoints,
-                    onToggleTracking = {
-                        if (state.isTracking) viewModel.finishAndSaveRun() else viewModel.toggleTracking()
-                    },
                     currentLocation = state.currentLocation
                 )
             }
+
+            // Pause scrim - dims everything except control buttons
+            if (state.isPaused) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.55f))
+                )
+            }
+
+            RunControl(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 50.dp),
+                isTracking = state.isTracking,
+                isPaused = state.isPaused,
+                onStart = { viewModel.toggleTracking() },
+                onPause = { viewModel.pauseTracking() },
+                onResume = { viewModel.resumeTracking() },
+                onEnd = { viewModel.finishAndSaveRun() }
+            )
 
             // Close Button "x"
             IconButton(
@@ -276,22 +297,19 @@ internal  fun GoalDisplay(
     }
 }
 
-// Bottom Container for the map and start button
+// Bottom Container for the map area
 @Composable
 internal fun BottomContainer(
     modifier: Modifier,
     runTypeName: String,
     hasLocationPermission: Boolean,
-    isTracking: Boolean,
     pathPoints: List<LatLng>,
-    onToggleTracking: () -> Unit,
     currentLocation: LatLng?
 ) {
     Box(
         modifier = modifier,
         contentAlignment = Alignment.Center
     ) {
-        // Map as background
         MapView(
             modifier = Modifier.fillMaxSize(),
             hasLocationPermission = hasLocationPermission,
@@ -304,14 +322,6 @@ internal fun BottomContainer(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .padding(top = 8.dp)
-        )
-
-        StartButton(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 50.dp),
-            isTracking = isTracking,
-            onToggleTracking = onToggleTracking
         )
     }
 }
@@ -383,49 +393,159 @@ internal fun MapView(
 
 
 @Composable
-internal fun StartButton(
+internal fun RunControl(
     modifier: Modifier = Modifier,
     isTracking: Boolean,
-    onToggleTracking: () -> Unit
+    isPaused: Boolean,
+    onStart: () -> Unit,
+    onPause: () -> Unit,
+    onResume: () -> Unit,
+    onEnd: () -> Unit
 ) {
-    val startButtonColor = Color(0xFFCE2029)
-    val stopButtonColor = Color(0xFFFFA500) // Orange for STOP
-    
-    val activeColor = if (isTracking) stopButtonColor else startButtonColor
-    
-    // Use explicit sizes for the layers to make the fade effect easy to control.
-    // The sizes are hierarchical: outer layer > middle layer > main button.
+    when {
+        !isTracking -> PrimaryRunButton(
+            modifier = modifier,
+            text = "START",
+            color = Color(0xFFCE2029),
+            onClick = onStart
+        )
+        !isPaused -> PrimaryRunIconButton(
+            modifier = modifier,
+            color = Color(0xFFFFA500),
+            icon = Icons.Default.Pause,
+            contentDescription = "Pause run",
+            onClick = onPause
+        )
+        else -> Row(
+            modifier = modifier,
+            horizontalArrangement = Arrangement.spacedBy(48.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            LabeledIconButton(
+                label = "END",
+                color = Color(0xFFCE2029),
+                icon = Icons.Default.Stop,
+                contentDescription = "End run",
+                onClick = onEnd
+            )
+            LabeledIconButton(
+                label = "RESUME",
+                color = Color(0xFF1DB954),
+                icon = Icons.Default.PlayArrow,
+                contentDescription = "Resume run",
+                onClick = onResume
+            )
+        }
+    }
+}
+
+@Composable
+private fun PrimaryRunButton(
+    modifier: Modifier = Modifier,
+    text: String,
+    color: Color,
+    onClick: () -> Unit
+) {
     Box(
         modifier = modifier,
         contentAlignment = Alignment.Center
     ) {
-        // Outer fade layer (Largest)
         Surface(
             modifier = Modifier.size(140.dp),
             shape = RoundedCornerShape(100.dp),
-            color = activeColor.copy(alpha = 0.1f)
+            color = color.copy(alpha = 0.1f)
         ) {}
-
-        // Middle fade layer
         Surface(
             modifier = Modifier.size(116.dp),
             shape = RoundedCornerShape(100.dp),
-            color = activeColor.copy(alpha = 0.2f)
+            color = color.copy(alpha = 0.2f)
         ) {}
-
-        // Main Button (Center)
         Button(
-            onClick = onToggleTracking,
+            onClick = onClick,
             modifier = Modifier.size(92.dp),
             shape = RoundedCornerShape(100.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = activeColor),
+            colors = ButtonDefaults.buttonColors(containerColor = color),
             contentPadding = PaddingValues(0.dp)
         ) {
             Text(
-                text = if (isTracking) "STOP" else "START",
+                text = text,
                 color = Color.White,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
+            )
+        }
+    }
+}
+
+@Composable
+private fun PrimaryRunIconButton(
+    modifier: Modifier = Modifier,
+    color: Color,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.Center
+    ) {
+        Surface(
+            modifier = Modifier.size(140.dp),
+            shape = RoundedCornerShape(100.dp),
+            color = color.copy(alpha = 0.1f)
+        ) {}
+        Surface(
+            modifier = Modifier.size(116.dp),
+            shape = RoundedCornerShape(100.dp),
+            color = color.copy(alpha = 0.2f)
+        ) {}
+        Button(
+            onClick = onClick,
+            modifier = Modifier.size(92.dp),
+            shape = RoundedCornerShape(100.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = color),
+            contentPadding = PaddingValues(0.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = Color.White,
+                modifier = Modifier.size(44.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun LabeledIconButton(
+    label: String,
+    color: Color,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(
+            text = label,
+            color = Color.White,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold
+        )
+        Button(
+            onClick = onClick,
+            modifier = Modifier.size(76.dp),
+            shape = RoundedCornerShape(100.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = color),
+            contentPadding = PaddingValues(0.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = Color.White,
+                modifier = Modifier.size(36.dp)
             )
         }
     }
