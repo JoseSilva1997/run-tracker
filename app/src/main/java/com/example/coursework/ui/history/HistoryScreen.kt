@@ -29,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.coursework.ui.common.RouteSnapshot
 import com.example.coursework.ui.theme.TextPrimary
 import com.example.coursework.ui.theme.TextSecondary
 import com.example.coursework.util.calcs.CommonUtils
@@ -149,7 +150,10 @@ private fun RunHistoryCard(
                     .fillMaxHeight()
                     .aspectRatio(1f)
             ) {
-
+                RouteSnapshot(
+                    pathPoints = item.pathPoints,
+                    modifier = Modifier.fillMaxSize()
+                )
             }
         }
     }
