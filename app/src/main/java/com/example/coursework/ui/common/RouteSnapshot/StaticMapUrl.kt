@@ -1,4 +1,4 @@
-package com.example.coursework.ui.common
+package com.example.coursework.ui.common.RouteSnapshot
 
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.PolyUtil

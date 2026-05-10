@@ -17,7 +17,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DirectionsRun
+import androidx.compose.material.icons.automirrored.filled.DirectionsRun
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.Button
@@ -44,7 +44,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.coursework.domain.model.RunSession
@@ -102,7 +101,8 @@ fun SummaryScreen(
             when {
                 uiState.isLoading -> Text("Loading...", color = TextSecondary)
                 uiState.error != null -> Text(uiState.error.orEmpty(), color = TextSecondary)
-                uiState.runSession != null -> SummaryContent(
+                uiState.runSession != null ->
+                    SummaryContent(
                     runSession = uiState.runSession!!,
                     runType = uiState.runType,
                     targetDistanceMeters = uiState.targetDistanceMeters ?: 0f,
@@ -130,7 +130,7 @@ fun SummaryScreen(
 }
 
 @Composable
-private fun ColumnScope.SummaryContent(
+private fun SummaryContent(
     runSession: RunSession,
     runType: RunType?,
     targetDistanceMeters: Float,
@@ -157,7 +157,7 @@ private fun RunTypeBanner(name: String, showDoneBadge: Boolean
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
-                imageVector = Icons.Default.DirectionsRun,
+                imageVector = Icons.AutoMirrored.Filled.DirectionsRun,
                 contentDescription = null,
                 tint = RUN_TYPE_ACCENT,
                 modifier = Modifier.size(32.dp)

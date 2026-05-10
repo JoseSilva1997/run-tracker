@@ -1,4 +1,4 @@
-package com.example.coursework.ui.common
+package com.example.coursework.ui.common.RouteSnapshot
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints

@@ -36,7 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.coursework.ui.common.DoneBadge
-import com.example.coursework.ui.common.RouteSnapshot
+import com.example.coursework.ui.common.RouteSnapshot.RouteSnapshot
 import com.example.coursework.ui.theme.TextPrimary
 import com.example.coursework.ui.theme.TextSecondary
 import com.example.coursework.util.calcs.CommonUtils
