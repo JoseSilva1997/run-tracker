@@ -103,7 +103,6 @@ class LiveRunViewModel @Inject constructor(
     private val _runFinishedEvent = Channel<Long>(Channel.BUFFERED)
     val runFinishedEvent = _runFinishedEvent.receiveAsFlow()
 
-    // Internal-only state (not part of UI contract).
     private val runPointsToSave = mutableListOf<RunPoint>()
     private var weatherSnapshot: WeatherSnapshot? = null
     private var hasFetchedWeather = false
@@ -115,8 +114,16 @@ class LiveRunViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
+            // Seed currentLocation from the OS's cached last-known point for better performance
+            locationTracker.getLastKnownLocation()?.let { point ->
+                _uiState.update {
+                    it.copy(currentLocation = LatLng(point.latitude, point.longitude))
+                }
+            }
+        }
+        viewModelScope.launch {
             val runType = runTypeRepository.getRunTypeById(runTypeId)
-            _uiState.update { it.copy(targetDistanceMeters = runType?.targetDistanceMeters ?: 0f) }
+            _uiState.update { it.copy(targetDistanceMeters = runType.targetDistanceMeters) }
         }
     }
 

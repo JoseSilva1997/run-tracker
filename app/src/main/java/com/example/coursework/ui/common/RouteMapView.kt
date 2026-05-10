@@ -29,7 +29,9 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import com.google.android.gms.maps.model.CameraPosition
 import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberCameraPositionState
@@ -104,7 +106,13 @@ private fun InteractiveRouteMap(
     pathPoints: List<LatLng>,
     modifier: Modifier = Modifier
 ) {
-    val cameraPositionState = rememberCameraPositionState()
+
+    // Seed initial camera position to the first point of the route to improve loading speed
+    val cameraPositionState = rememberCameraPositionState {
+        pathPoints.firstOrNull()?.let {
+            position = CameraPosition.fromLatLngZoom(it, DEFAULT_ZOOM)
+        }
+    }
 
     LaunchedEffect(pathPoints) {
         if (pathPoints.isEmpty()) return@LaunchedEffect
@@ -130,9 +138,16 @@ private fun InteractiveRouteMap(
             GoogleMap(
                 modifier = Modifier.fillMaxSize(),
                 cameraPositionState = cameraPositionState,
+                properties = MapProperties(
+                    isBuildingEnabled = false,
+                    isIndoorEnabled = false,
+                    isTrafficEnabled = false,
+                ),
                 uiSettings = MapUiSettings(
                     zoomControlsEnabled = false,
-                    mapToolbarEnabled = false
+                    mapToolbarEnabled = false,
+                    compassEnabled = false,
+                    tiltGesturesEnabled = false,
                 )
             ) {
                 Polyline(

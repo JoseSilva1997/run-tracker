@@ -54,6 +54,7 @@ import com.example.coursework.ui.theme.BgDark
 import com.example.coursework.ui.theme.BtnPrimary
 import com.example.coursework.ui.theme.TextPrimary
 import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
@@ -396,43 +397,28 @@ internal fun MapView(
     pathPoints: List<LatLng>,
     currentLocation: LatLng?
 ) {
-    // Defer the heavy GoogleMap inflation until after the navigation
-    // transition completes. First-launch MapView creation can stall the
-    // main thread for several hundred ms; without this gate the dashboard
-    // -> LiveRunScreen transition freezes.
     var inflateMap by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         delay(MAP_INFLATE_DELAY_MS)
         inflateMap = true
     }
 
-    if (!inflateMap) {
-        // Brief placeholder while the inflation gate is closed. BgDark
-        // matches the surrounding chrome so the gap reads as "loading".
+    if (!inflateMap || currentLocation == null) {
         Box(modifier = modifier.background(BgDark))
         return
     }
 
-    val cameraPositionState = rememberCameraPositionState()
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(currentLocation, MAP_FOLLOW_ZOOM)
+    }
 
     // Animate the camera to the user the first time we get a location, and
     // every time it changes pre-tracking (cached last-known -> real fix).
     // Once tracking starts, pathPoints takes over via the follow effect.
-    LaunchedEffect(currentLocation) {
-        if (currentLocation != null && pathPoints.isEmpty()) {
-            cameraPositionState.animate(
-                update = CameraUpdateFactory.newLatLngZoom(currentLocation, MAP_FOLLOW_ZOOM),
-                durationMs = MAP_CAMERA_ANIMATION_MS
-            )
-        }
-    }
-
-    // Continuous follow: re-keys on the most recent recorded point so the
-    // camera animates smoothly along with the runner during tracking.
     LaunchedEffect(pathPoints.lastOrNull()) {
-        pathPoints.lastOrNull()?.let { latestLocation ->
+        pathPoints.lastOrNull()?.let { latest ->
             cameraPositionState.animate(
-                update = CameraUpdateFactory.newLatLngZoom(latestLocation, MAP_FOLLOW_ZOOM),
+                update = CameraUpdateFactory.newLatLngZoom(latest, MAP_FOLLOW_ZOOM),
                 durationMs = MAP_CAMERA_ANIMATION_MS
             )
         }
@@ -441,7 +427,12 @@ internal fun MapView(
     // Re-create properties ONLY when the permission state changes
     val mapProperties by remember(hasLocationPermission) {
         mutableStateOf(
-            MapProperties(isMyLocationEnabled = hasLocationPermission)
+            MapProperties(
+                isMyLocationEnabled = hasLocationPermission,
+                isBuildingEnabled = false,
+                isIndoorEnabled = false,
+                isTrafficEnabled = false
+            )
         )
     }
 
@@ -450,7 +441,9 @@ internal fun MapView(
         mutableStateOf(
             MapUiSettings(
                 myLocationButtonEnabled = true,
-                zoomControlsEnabled = false // Hides + and - buttons for a cleaner UI
+                zoomControlsEnabled = false,
+                mapToolbarEnabled = false,
+                tiltGesturesEnabled = false,
             )
         )
     }
@@ -463,11 +456,7 @@ internal fun MapView(
     ) {
         // Draw the route
         if (pathPoints.isNotEmpty()) {
-            Polyline(
-                points = pathPoints,
-                color = Color.Blue,
-                width = 12f
-            )
+            Polyline(points = pathPoints, color = Color.Blue, width = 12f)
         }
     }
 }
