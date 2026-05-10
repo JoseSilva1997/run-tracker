@@ -67,7 +67,7 @@ private const val MAP_FOLLOW_ZOOM = 17f                // Street-level zoom whil
 private const val MAP_CAMERA_ANIMATION_MS = 1000       // Smooth pan duration when following new fixes.
 private const val COUNTDOWN_START = 3                  // Pre-run countdown begins at this number.
 private const val COUNTDOWN_TICK_MS = 1000L            // One second between countdown decrements.
-// Delay GoogleMap inflation so navigation transition can finish first.
+// Delay Google Map inflation so navigation transition can finish first.
 // MapView's native/GL surface is expensive to inflate on first launch
 // and freezes the main thread mid-transition without this gate.
 private const val MAP_INFLATE_DELAY_MS = 200L
@@ -102,7 +102,6 @@ fun LiveRunScreen(
         if (current > 1) {
             countdown = current - 1
         } else {
-            viewModel.tts.speak("Go", flush = false, utteranceId = "go")
             viewModel.toggleTracking()
             countdown = null
         }
@@ -126,7 +125,7 @@ fun LiveRunScreen(
     }
 
     // First composition: check existing grants. If we already have one,
-    // tell the VM directly. Otherwise prompt for both at once so the user
+    // tell the VM directly. Otherwise, prompt for both at once so the user
     // only sees a single system dialog.
     LaunchedEffect(Unit) {
         val hasFineLocation = ContextCompat.checkSelfPermission(
@@ -599,7 +598,7 @@ private fun PrimaryRunIconButton(
 }
 
 // Smaller circular icon button with a white text label floating above.
-// Used for the END / RESUME pair shown when paused. No haloes - the
+// Used for the END / RESUME pair shown when paused. No halos - the
 // pause-state scrim already gives these buttons enough contrast.
 @Composable
 private fun LabeledIconButton(

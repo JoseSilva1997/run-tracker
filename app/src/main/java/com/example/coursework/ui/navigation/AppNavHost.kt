@@ -144,7 +144,11 @@ fun AppNavHost() {
                     runTypeName = runTypeName,
                     onClose = { navController.popBackStack() },
                     onRunFinished = { runId ->
-                        navController.navigate("summary/$runId")
+                        navController.navigate("summary/$runId") {
+                            popUpTo("liveRun/{runTypeId}/{runTypeName}") {
+                                inclusive = true
+                            }
+                        }
                     }
                 )
             }
@@ -156,11 +160,7 @@ fun AppNavHost() {
                 )
             ) {
                 SummaryScreen(
-                    onDone = {
-                        navController.navigate(DASHBOARD_ROUTE) {
-                            popUpTo(MAIN_GRAPH_ROUTE) { inclusive = true }
-                        }
-                    }
+                    onDone = { navController.popBackStack() }
                 )
             }
         }
