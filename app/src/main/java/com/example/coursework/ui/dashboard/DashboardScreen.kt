@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -58,7 +59,8 @@ import com.example.coursework.ui.theme.TextSecondary
 fun DashboardScreen(
     filterOptions: List<String>,
     onFilterSelected: (String) -> Unit,
-    onAddNewRunType: (String, Float) -> Unit
+    onAddNewRunType: (String, Float) -> Unit,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     var showAddRunTypeSheet by remember { mutableStateOf(false) }
     var selectedFilter by remember { mutableStateOf(filterOptions.firstOrNull().orEmpty()) }
@@ -134,6 +136,7 @@ fun DashboardScreen(
         MetricsGrid()
 
         Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(contentPadding.calculateBottomPadding()))
     }
 
     if (showAddRunTypeSheet) {

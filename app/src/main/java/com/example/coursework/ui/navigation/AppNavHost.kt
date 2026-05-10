@@ -83,7 +83,6 @@ fun AppNavHost() {
             startDestination = MAIN_GRAPH_ROUTE,
             modifier = Modifier
                 .background(BgDark)
-                .padding(shellPadding)
                 .padding(top = 16.dp)
                 .safeDrawingPadding()
         ) {
@@ -100,11 +99,15 @@ fun AppNavHost() {
                         onFilterSelected = {},
                         onAddNewRunType = { name, distance ->
                             addRunTypeVm.addRunType(name, distance)
-                        }
+                        },
+                        contentPadding = shellPadding
                     )
                 }
                 composable(HISTORY_ROUTE) {
-                    HistoryScreen(contentPadding = shellPadding)
+                    HistoryScreen(
+                        contentPadding = shellPadding,
+                        onRunClick = { runId -> navController.navigate("summary/$runId") }
+                    )
                 }
             }
 
