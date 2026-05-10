@@ -50,18 +50,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.coursework.domain.model.RunSession
 import com.example.coursework.domain.model.RunType
 import com.example.coursework.domain.model.WeatherSnapshot
+import com.example.coursework.ui.common.RouteMapView
 import com.example.coursework.ui.theme.BgDark
 import com.example.coursework.ui.theme.BtnPrimary
 import com.example.coursework.ui.theme.BtnPrimaryBlue
 import com.example.coursework.ui.theme.TextPrimary
 import com.example.coursework.ui.theme.TextSecondary
 import com.example.coursework.util.calcs.CommonUtils
-import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.LatLng
-import com.google.maps.android.compose.GoogleMap
-import com.google.maps.android.compose.MapUiSettings
-import com.google.maps.android.compose.Polyline
-import com.google.maps.android.compose.rememberCameraPositionState
 import java.util.Locale
 
 private val CARD_BG = Color(0xFF1E1E1E)
@@ -70,8 +66,6 @@ private val TRAINING_ACCENT = BtnPrimary           // Green for training data ca
 private val WEATHER_ACCENT = BtnPrimaryBlue        // Blue for weather card.
 private val RUN_TYPE_ACCENT = Color(0xFFFFA500)    // Orange banner for run-type header.
 private const val MAP_HEIGHT_DP = 240
-private const val MAP_ZOOM = 15f
-private const val ROUTE_LINE_WIDTH = 12f
 
 @Composable
 fun SummaryScreen(
@@ -171,13 +165,6 @@ private fun RunTypeBanner(name: String) {
 
 @Composable
 private fun RouteMap(pathPoints: List<LatLng>) {
-    val cameraPositionState = rememberCameraPositionState()
-
-    LaunchedEffect(pathPoints) {
-        val anchor = pathPoints.firstOrNull() ?: return@LaunchedEffect
-        cameraPositionState.move(CameraUpdateFactory.newLatLngZoom(anchor, MAP_ZOOM))
-    }
-
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -185,23 +172,10 @@ private fun RouteMap(pathPoints: List<LatLng>) {
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = CARD_BG)
     ) {
-        if (pathPoints.isEmpty()) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("No route data", color = TextSecondary)
-            }
-        } else {
-            GoogleMap(
-                modifier = Modifier.fillMaxSize(),
-                cameraPositionState = cameraPositionState,
-                uiSettings = MapUiSettings(zoomControlsEnabled = false)
-            ) {
-                Polyline(
-                    points = pathPoints,
-                    color = Color.Blue,
-                    width = ROUTE_LINE_WIDTH
-                )
-            }
-        }
+        RouteMapView(
+            pathPoints = pathPoints,
+            modifier = Modifier.fillMaxSize()
+        )
     }
 }
 
