@@ -49,4 +49,21 @@ class RunRepositoryImpl @Inject constructor(
             list.map { it.runSession.toDomain() }
         }
     }
+
+    override fun observeAllWithPoints(): Flow<List<Pair<RunSession, List<RunPoint>>>> {
+        return runSessionDao.getAllRunSessionsWithPoints().map { list ->
+            list.map { rwp ->
+                val session = rwp.runSession.toDomain()
+                val points = rwp.points.map { entity ->
+                    RunPoint(
+                        latitude = entity.latitude,
+                        longitude = entity.longitude,
+                        timestamp = entity.timestamp,
+                        accuracy = entity.accuracy
+                    )
+                }
+                session to points
+            }
+        }
+    }
 }
