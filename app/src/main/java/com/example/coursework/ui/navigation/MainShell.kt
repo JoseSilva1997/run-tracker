@@ -1,10 +1,13 @@
 package com.example.coursework.ui.navigation
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -75,74 +78,76 @@ fun MainShell(
     Box(modifier = Modifier.fillMaxSize()) {
         content(if (showChrome) PaddingValues(bottom = contentBottomReserve) else PaddingValues(0.dp))
 
-        if (!showChrome) return@Box
-
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
+        AnimatedVisibility(
+            visible = showChrome,
+            enter = fadeIn(tween(200)), // Fast fade in animation.
+            exit = fadeOut(tween(200)), // Fast fade out animation.
+            modifier = Modifier.align(Alignment.BottomCenter)
         ) {
-            BottomNavBar(
-                currentRoute = currentRoute,
-                onTabSelected = onTabSelected,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = sysBottom)
-            )
-
-            // Pill above diamond — chevron-suffixed dropdown chip with green outline.
-            Surface(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = sysBottom + NAV_BAR_HEIGHT_DP.dp / 2 + DIAMOND_SIZE_DP.dp / 2 + DIAMOND_LIFT_DP.dp + PILL_GAP_ABOVE_DIAMOND_DP.dp)
-                    .height(PILL_HEIGHT_DP.dp)
-                    .wrapContentSize()
-                    .clip(RoundedCornerShape(50))
-                    .border(
-                        width = PILL_BORDER_DP.dp,
-                        color = com.example.coursework.ui.theme.BtnPrimary,
-                        shape = RoundedCornerShape(50)
-                    )
-                    .clickable(enabled = true, onClick = onSelectRunType),
-                color = MaterialTheme.colorScheme.surface,
-                shape = RoundedCornerShape(50),
-                shadowElevation = 6.dp
+            Box(modifier = Modifier.fillMaxWidth()
             ) {
-                Row(
-                    modifier = Modifier.padding(start = 14.dp, end = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.LocationOn,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = com.example.coursework.ui.theme.BtnPrimary
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = selectedRunTypeName.ifBlank { "Choose run type" },
-                        color = com.example.coursework.ui.theme.TextPrimary,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Icon(
-                        imageVector = Icons.Default.KeyboardArrowDown,
-                        contentDescription = "Open run type picker",
-                        modifier = Modifier.size(20.dp),
-                        tint = com.example.coursework.ui.theme.BtnPrimary
-                    )
-                }
-            }
+                BottomNavBar(
+                    currentRoute = currentRoute,
+                    onTabSelected = onTabSelected,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = sysBottom)
+                )
 
-            DiamondStartButton(
-                enabled = canStart,
-                onClick = onStartRun,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = sysBottom + NAV_BAR_HEIGHT_DP.dp / 2 - DIAMOND_SIZE_DP.dp / 2 + DIAMOND_LIFT_DP.dp)
-            )
+                // Pill above diamond — chevron-suffixed dropdown chip with green outline.
+                Surface(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = sysBottom + NAV_BAR_HEIGHT_DP.dp / 2 + DIAMOND_SIZE_DP.dp / 2 + DIAMOND_LIFT_DP.dp + PILL_GAP_ABOVE_DIAMOND_DP.dp)
+                        .height(PILL_HEIGHT_DP.dp)
+                        .wrapContentSize()
+                        .clip(RoundedCornerShape(50))
+                        .border(
+                            width = PILL_BORDER_DP.dp,
+                            color = com.example.coursework.ui.theme.BtnPrimary,
+                            shape = RoundedCornerShape(50)
+                        )
+                        .clickable(enabled = true, onClick = onSelectRunType),
+                    color = MaterialTheme.colorScheme.surface,
+                    shape = RoundedCornerShape(50),
+                    shadowElevation = 6.dp
+                ) {
+                    Row(
+                        modifier = Modifier.padding(start = 14.dp, end = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.LocationOn,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = com.example.coursework.ui.theme.BtnPrimary
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = selectedRunTypeName.ifBlank { "Choose run type" },
+                            color = com.example.coursework.ui.theme.TextPrimary,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Icon(
+                            imageVector = Icons.Default.KeyboardArrowDown,
+                            contentDescription = "Open run type picker",
+                            modifier = Modifier.size(20.dp),
+                            tint = com.example.coursework.ui.theme.BtnPrimary
+                        )
+                    }
+                }
+
+                DiamondStartButton(
+                    enabled = canStart,
+                    onClick = onStartRun,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = sysBottom + NAV_BAR_HEIGHT_DP.dp / 2 - DIAMOND_SIZE_DP.dp / 2 + DIAMOND_LIFT_DP.dp)
+                )
+            }
         }
     }
 }

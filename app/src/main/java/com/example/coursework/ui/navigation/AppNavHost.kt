@@ -41,14 +41,11 @@ fun AppNavHost() {
     val currentRoute = backStackEntry?.destination?.route
     val isTabRoute = currentRoute == DASHBOARD_ROUTE || currentRoute == HISTORY_ROUTE
 
-    // Shared dashboard VM scoped to the main tab graph so the pill (in shell) and
-    // dashboard composable see the same selected run type.
-    val sharedVm: DashboardViewModel? = if (isTabRoute) {
-        val parentEntry: NavBackStackEntry = remember(backStackEntry) {
-            navController.getBackStackEntry(MAIN_GRAPH_ROUTE)
-        }
-        hiltViewModel(parentEntry)
-    } else null
+    // Resolve once; main graph entry persists across summary/liveRun thanks to saveState.
+    val parentEntry: NavBackStackEntry? = remember(backStackEntry) {
+        runCatching { navController.getBackStackEntry(MAIN_GRAPH_ROUTE) }.getOrNull()
+    }
+    val sharedVm: DashboardViewModel? = parentEntry?.let { hiltViewModel(it) }
 
     val runTypes by (sharedVm?.runTypes?.collectAsState()
         ?: remember { mutableStateOf(emptyList()) })

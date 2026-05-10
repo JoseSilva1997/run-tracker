@@ -39,7 +39,7 @@ class DashboardViewModel @Inject constructor(
         } else {
             types.firstOrNull()?.name.orEmpty()
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), "")
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, "")
 
     init {
         // Starts observing run types immediately so dashboard content stays current.
