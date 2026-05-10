@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.stateIn
 data class HistoryItem(
     val session: RunSession,
     val runTypeName: String,
+    val targetDistanceMeters: Float,
     val pathPoints: List<LatLng>
 )
 
@@ -35,13 +36,15 @@ class HistoryViewModel @Inject constructor(
         runRepository.observeAllWithPoints(),
         runTypeRepository.observeAll()
     ) { runs, runTypes ->
-        val typeNamesById = runTypes.associate { it.id to it.name }
+        val typesById = runTypes.associateBy { it.id }
         HistoryUiState(
             isLoading = false,
             items = runs.map { (session, points) ->
+                val type = typesById[session.runTypeId]
                 HistoryItem(
                     session = session,
-                    runTypeName = typeNamesById[session.runTypeId] ?: "Run",
+                    runTypeName = type?.name ?: "Run",
+                    targetDistanceMeters = type?.targetDistanceMeters ?: 0f,
                     pathPoints = points.map { LatLng(it.latitude, it.longitude) }
                 )
             }

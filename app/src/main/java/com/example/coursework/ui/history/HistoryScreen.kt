@@ -22,13 +22,20 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.coursework.ui.common.DoneBadge
 import com.example.coursework.ui.common.RouteSnapshot
 import com.example.coursework.ui.theme.TextPrimary
 import com.example.coursework.ui.theme.TextSecondary
@@ -97,6 +104,9 @@ private fun RunHistoryCard(
     item: HistoryItem,
     onClick: () -> Unit
 ) {
+    val isCompleted = item.targetDistanceMeters > 0f &&
+            item.session.totalDistanceMeters >= item.targetDistanceMeters
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -119,13 +129,19 @@ private fun RunHistoryCard(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
-                Text(
-                    text = item.runTypeName,
-                    color = TextPrimary,
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1
-                )
+                Row( verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Start) {
+                    Text(
+                        text = item.runTypeName,
+                        color = TextPrimary,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1
+                    )
+                    if (isCompleted) {
+                        DoneBadge(modifier = Modifier.padding(start = 8.dp))
+                    }
+                }
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -150,14 +166,29 @@ private fun RunHistoryCard(
                     .fillMaxHeight()
                     .aspectRatio(1f)
             ) {
+                val fadeBrush = remember {
+                    Brush.horizontalGradient(
+                        0f to Color.Transparent,
+                        0.5f to Color.Black,
+                        1f to Color.Black
+                    )
+                }
                 RouteSnapshot(
                     pathPoints = item.pathPoints,
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen}
+                        .drawWithContent {
+                            drawContent()
+                            drawRect(brush = fadeBrush, blendMode = BlendMode.DstIn)
+                        }
                 )
             }
         }
     }
 }
+
+
 
 private fun formatDate(timestamp: Long): String {
     return SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(Date(timestamp))

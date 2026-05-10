@@ -50,6 +50,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.coursework.domain.model.RunSession
 import com.example.coursework.domain.model.RunType
 import com.example.coursework.domain.model.WeatherSnapshot
+import com.example.coursework.ui.common.DoneBadge
 import com.example.coursework.ui.common.RouteMapView
 import com.example.coursework.ui.theme.BgDark
 import com.example.coursework.ui.theme.BtnPrimary
@@ -104,6 +105,7 @@ fun SummaryScreen(
                 uiState.runSession != null -> SummaryContent(
                     runSession = uiState.runSession!!,
                     runType = uiState.runType,
+                    targetDistanceMeters = uiState.targetDistanceMeters ?: 0f,
                     pathPoints = uiState.pathPoints
                 )
             }
@@ -131,9 +133,13 @@ fun SummaryScreen(
 private fun ColumnScope.SummaryContent(
     runSession: RunSession,
     runType: RunType?,
+    targetDistanceMeters: Float,
     pathPoints: List<LatLng>
 ) {
-    RunTypeBanner(name = runType?.name ?: "Run")
+    val isCompleted = targetDistanceMeters > 0f &&
+            runSession.totalDistanceMeters >= targetDistanceMeters
+
+    RunTypeBanner(name = runType?.name ?: "Run", showDoneBadge = isCompleted)
     RouteMap(pathPoints = pathPoints)
     TrainingDataCard(runSession = runSession)
     WeatherCard(weather = runSession.weatherSnapshot)
@@ -142,24 +148,29 @@ private fun ColumnScope.SummaryContent(
 // Run type header. Icon + name, no background - keeps the top of the
 // screen quiet so the map and stat cards carry the visual weight.
 @Composable
-private fun RunTypeBanner(name: String) {
+private fun RunTypeBanner(name: String, showDoneBadge: Boolean
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Icon(
-            imageVector = Icons.Default.DirectionsRun,
-            contentDescription = null,
-            tint = RUN_TYPE_ACCENT,
-            modifier = Modifier.size(32.dp)
-        )
-        Spacer(Modifier.width(10.dp))
-        Text(
-            text = name,
-            color = TextPrimary,
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Default.DirectionsRun,
+                contentDescription = null,
+                tint = RUN_TYPE_ACCENT,
+                modifier = Modifier.size(32.dp)
+            )
+            Spacer(Modifier.width(10.dp))
+            Text(
+                text = name,
+                color = TextPrimary,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        if (showDoneBadge) DoneBadge()
     }
 }
 

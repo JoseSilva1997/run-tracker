@@ -19,6 +19,7 @@ import kotlinx.coroutines.launch
 data class SummaryUiState(
     val isLoading: Boolean = true,
     val runSession: RunSession? = null,
+    val targetDistanceMeters: Float? = 0f,
     val runType: RunType? = null,
     val pathPoints: List<LatLng> = emptyList(),
     val error: String? = null
@@ -51,10 +52,12 @@ class SummaryViewModel @Inject constructor(
             try {
                 val (session, points) = runRepository.getRunDetails(runId)
                 val runType = runTypeRepository.getRunTypeById(session.runTypeId)
+                val targetDistanceMeters = runType.targetDistanceMeters ?: 0f
                 _uiState.value = SummaryUiState(
                     isLoading = false,
                     runSession = session,
                     runType = runType,
+                    targetDistanceMeters = targetDistanceMeters,
                     pathPoints = points.map { LatLng(it.latitude, it.longitude) }
                 )
             } catch (e: Exception) {
