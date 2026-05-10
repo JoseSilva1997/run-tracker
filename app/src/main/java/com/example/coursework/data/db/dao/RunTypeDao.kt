@@ -10,8 +10,17 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface RunTypeDao {
 
+    @Query("SELECT * FROM run_type WHERE isArchived = 0 ORDER BY targetDistanceMeters ASC")
+    fun observeActive(): Flow<List<RunTypeEntity>>
+
     @Query("SELECT * FROM run_type ORDER BY targetDistanceMeters ASC")
-    fun observeAll(): Flow<List<RunTypeEntity>>
+    fun observeAllIncludingArchived(): Flow<List<RunTypeEntity>>
+
+    @Query("UPDATE run_type SET isArchived = 1 WHERE id = :id")
+    suspend fun archive(id: Long)
+
+    @Query("SELECT COUNT(*) FROM run_sessions WHERE runTypeId = :id")
+    suspend fun countRunsForType(id: Long): Int
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(runType: RunTypeEntity): Long

@@ -11,12 +11,14 @@ import com.example.coursework.domain.model.RunType
 fun RunTypeEntity.toDomain() = RunType(
     id = id,
     name = name,
-    targetDistanceMeters = targetDistanceMeters
+    targetDistanceMeters = targetDistanceMeters,
+    isArchived = isArchived
 )
 
 // Maps domain model -> Room entity for persistence operations.
 fun RunType.toEntity() = RunTypeEntity(
     id = id,
     name = name,
-    targetDistanceMeters = targetDistanceMeters
+    targetDistanceMeters = targetDistanceMeters,
+    isArchived = isArchived
 )

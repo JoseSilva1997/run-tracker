@@ -5,6 +5,7 @@ import androidx.room.Room
 import com.example.coursework.data.db.AppDatabase
 import com.example.coursework.data.db.dao.RunSessionDao
 import com.example.coursework.data.db.dao.RunTypeDao
+import com.example.coursework.data.db.migrations.MIGRATION_3_4
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -26,6 +27,7 @@ object DatabaseModule {
             AppDatabase::class.java,
             "run_tracker.db"
         )
+            .addMigrations(MIGRATION_3_4)
             .build()
     }
 
