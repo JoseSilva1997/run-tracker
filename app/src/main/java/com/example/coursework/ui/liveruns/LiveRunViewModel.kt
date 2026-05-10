@@ -10,6 +10,7 @@ import com.example.coursework.domain.model.WeatherSnapshot
 import com.example.coursework.domain.repository.RunRepository
 import com.example.coursework.domain.repository.RunTypeRepository
 import com.example.coursework.domain.repository.WeatherRepository
+import com.example.coursework.util.textToSpeech.TtsHolder
 import com.google.android.gms.maps.model.LatLng
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -88,6 +89,7 @@ class LiveRunViewModel @Inject constructor(
     private val runRepository: RunRepository,
     private val weatherRepository: WeatherRepository,
     private val runTypeRepository: RunTypeRepository,
+    val tts: TtsHolder,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 

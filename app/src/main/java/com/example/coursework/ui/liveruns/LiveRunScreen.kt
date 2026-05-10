@@ -2,7 +2,6 @@ package com.example.coursework.ui.liveruns
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.speech.tts.TextToSpeech
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -34,7 +33,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -90,28 +88,20 @@ fun LiveRunScreen(
     // TextToSpeech instance lives for the lifetime of this screen. We stash
     // the reference in state so the countdown effect can speak each tick,
     // and shut it down via DisposableEffect to avoid leaking the engine.
-    var tts by remember { mutableStateOf<TextToSpeech?>(null) }
-    DisposableEffect(Unit) {
-        val instance = TextToSpeech(context) { /* default language is fine */ }
-        tts = instance
-        onDispose {
-            instance.stop()
-            instance.shutdown()
-        }
-    }
+    val ttsReady by viewModel.tts.ready.collectAsStateWithLifecycle()
 
     // Countdown FSM. Each state change speaks one number (or "Go") and
     // waits one second. Re-keying on `countdown` cancels the previous
     // coroutine if state changes early (e.g. the user navigates away).
-    LaunchedEffect(countdown) {
+    LaunchedEffect(countdown, ttsReady) {
         val current = countdown ?: return@LaunchedEffect
-        tts?.speak(current.toString(), TextToSpeech.QUEUE_FLUSH, null, null)
+        if (!ttsReady) return@LaunchedEffect
+        viewModel.tts.speak(current.toString(), flush = true, utteranceId = "tick-$current")
         delay(COUNTDOWN_TICK_MS)
         if (current > 1) {
             countdown = current - 1
         } else {
-            // Final tick: speak "Go", flip the VM into tracking mode, hide overlay.
-            tts?.speak("Go", TextToSpeech.QUEUE_FLUSH, null, null)
+            viewModel.tts.speak("Go", flush = false, utteranceId = "go")
             viewModel.toggleTracking()
             countdown = null
         }
@@ -232,7 +222,7 @@ fun LiveRunScreen(
                     .padding(bottom = 50.dp),
                 isTracking = state.isTracking,
                 isPaused = state.isPaused,
-                onStart = { if (countdown == null) countdown = COUNTDOWN_START },
+                onStart = { if (countdown == null && ttsReady) countdown = COUNTDOWN_START },
                 onPause = { viewModel.pauseTracking() },
                 onResume = { viewModel.resumeTracking() },
                 onEnd = { viewModel.finishAndSaveRun() }
