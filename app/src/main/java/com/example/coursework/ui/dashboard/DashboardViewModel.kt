@@ -12,9 +12,11 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
 // ViewModel for Dashboard UI state related to run type selection/filtering.
 @HiltViewModel
@@ -27,6 +29,10 @@ class DashboardViewModel @Inject constructor(
     private val _runTypes = MutableStateFlow<List<RunType>>(emptyList())
     val runTypes: StateFlow<List<RunType>> = _runTypes
 
+    private val initialSelected: String = runBlocking {
+        preferencesRepository.lastSelectedRunTypeName.first().orEmpty()
+    }
+
     // Selected run type name:
     // 1) restores last saved selection when it still exists,
     // 2) otherwise falls back to first available run type.
@@ -34,12 +40,13 @@ class DashboardViewModel @Inject constructor(
         runTypes,
         preferencesRepository.lastSelectedRunTypeName
     ) { types, lastSelected ->
-        if (!lastSelected.isNullOrEmpty() && types.any { it.name == lastSelected }) {
-            lastSelected
-        } else {
-            types.firstOrNull()?.name.orEmpty()
+        val pref = lastSelected.orEmpty().ifEmpty { initialSelected }
+        when {
+            types.isEmpty() -> pref
+            pref.isNotEmpty() && types.any { it.name == pref } -> pref
+            else -> types.firstOrNull()?.name.orEmpty()
         }
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, "")
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, initialSelected)
 
     init {
         // Starts observing run types immediately so dashboard content stays current.
