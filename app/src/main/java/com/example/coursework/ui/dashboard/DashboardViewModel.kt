@@ -51,7 +51,7 @@ class DashboardViewModel @Inject constructor(
     init {
         // Starts observing run types immediately so dashboard content stays current.
         viewModelScope.launch {
-            repository.observeAll()
+            repository.observeActive()
                 .catch { _runTypes.update { emptyList() }}
                 .collect { list -> _runTypes.update { list }}
         }

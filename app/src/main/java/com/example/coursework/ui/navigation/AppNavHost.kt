@@ -1,16 +1,22 @@
 package com.example.coursework.ui.navigation
 
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavBackStackEntry
@@ -25,7 +31,10 @@ import com.example.coursework.ui.dashboard.DashboardScreen
 import com.example.coursework.ui.dashboard.DashboardViewModel
 import com.example.coursework.ui.history.HistoryScreen
 import com.example.coursework.ui.liveruns.LiveRunScreen
+import com.example.coursework.domain.model.RunType
 import com.example.coursework.ui.runtypes.AddRunTypeViewModel
+import com.example.coursework.ui.runtypes.DeleteRunTypeEvent
+import com.example.coursework.ui.runtypes.DeleteRunTypeViewModel
 import com.example.coursework.ui.runtypes.RunTypePickerBottomSheet
 import com.example.coursework.ui.summary.SummaryScreen
 import com.example.coursework.ui.theme.BgDark
@@ -54,6 +63,21 @@ fun AppNavHost() {
 
     var showPicker by remember { mutableStateOf(false) }
     var pickerRequestAddRunType by remember { mutableStateOf(false) }
+    var pendingDelete by remember { mutableStateOf<RunType?>(null) }
+
+    val deleteRunTypeVm: DeleteRunTypeViewModel = hiltViewModel()
+    val context = LocalContext.current
+    LaunchedEffect(Unit) {
+        deleteRunTypeVm.events.collect { event ->
+            val message = when (event) {
+                is DeleteRunTypeEvent.Deleted -> "Run type deleted"
+                is DeleteRunTypeEvent.Archived ->
+                    "Run type deleted."
+                is DeleteRunTypeEvent.Error -> event.message
+            }
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        }
+    }
 
     MainShell(
         showChrome = isTabRoute,
@@ -154,7 +178,29 @@ fun AppNavHost() {
                 showPicker = false
                 pickerRequestAddRunType = true
             },
+            onDeleteRequest = { pendingDelete = it },
             onDismiss = { showPicker = false }
+        )
+    }
+
+    pendingDelete?.let { target ->
+        AlertDialog(
+            onDismissRequest = { pendingDelete = null },
+            title = { Text("Delete ${target.name}?") },
+            text = {
+                Text(
+                    "Delete this run type? This action cannot be undone."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    deleteRunTypeVm.deleteRunType(target.id)
+                    pendingDelete = null
+                }) { Text("Delete") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDelete = null }) { Text("Cancel") }
+            }
         )
     }
 

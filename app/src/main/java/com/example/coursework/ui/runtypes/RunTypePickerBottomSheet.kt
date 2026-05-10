@@ -12,8 +12,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -37,6 +39,7 @@ fun RunTypePickerBottomSheet(
     selectedRunTypeName: String,
     onRunTypeSelected: (String) -> Unit,
     onAddRunType: () -> Unit,
+    onDeleteRequest: (RunType) -> Unit,
     onDismiss: () -> Unit
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
@@ -69,6 +72,14 @@ fun RunTypePickerBottomSheet(
                                 selected = option.name == selectedRunTypeName,
                                 onClick = null
                             )
+                        },
+                        trailingContent = {
+                            IconButton(onClick = { onDeleteRequest(option) }) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = "Delete ${option.name}"
+                                )
+                            }
                         },
                         modifier = Modifier
                             .fillMaxWidth()
