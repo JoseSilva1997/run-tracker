@@ -10,4 +10,6 @@ interface RunRepository {
     fun getAllRuns(): Flow<List<RunSession>>
     fun observeAllWithPoints(): Flow<List<Pair<RunSession, List<RunPoint>>>>
     suspend fun deleteRun(runId: Long)
+
+    fun observeRuns(runTypeId: Long?): Flow<List<RunSession>>
 }

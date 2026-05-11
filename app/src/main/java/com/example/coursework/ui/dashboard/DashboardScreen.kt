@@ -48,27 +48,35 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.coursework.domain.model.DashboardMetrics
 import com.example.coursework.ui.runtypes.AddRunTypeBottomSheet
 import com.example.coursework.ui.theme.BgDark
 import com.example.coursework.ui.theme.BtnPrimaryBlue
 import com.example.coursework.ui.theme.TextPrimary
 import com.example.coursework.ui.theme.TextSecondary
+import com.example.coursework.util.calcs.CommonUtils
+import java.util.Locale
+
+
+private const val SECONDS_PER_MINUTE = 60
+private const val METERS_PER_KM = 1000f
+private const val EMPTY_VALUE = "--"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
     filterOptions: List<String>,
+    selectedFilter: String,
+    metrics: DashboardMetrics,
     onFilterSelected: (String) -> Unit,
     onAddNewRunType: (String, Float) -> Unit,
     contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     var showAddRunTypeSheet by remember { mutableStateOf(false) }
-    var selectedFilter by remember { mutableStateOf(filterOptions.firstOrNull().orEmpty()) }
 
-    LaunchedEffect(filterOptions) {
+    LaunchedEffect(filterOptions, selectedFilter) {
         if (selectedFilter !in filterOptions) {
-            selectedFilter = filterOptions.firstOrNull().orEmpty()
-            onFilterSelected(selectedFilter)
+            filterOptions.firstOrNull()?.let(onFilterSelected)
         }
     }
 
@@ -99,10 +107,7 @@ fun DashboardScreen(
                 FilterChipsRow(
                     options = filterOptions,
                     selectedFilter = selectedFilter,
-                    onSelected = {
-                        selectedFilter = it
-                        onFilterSelected(it)
-                    }
+                    onSelected = onFilterSelected
                 )
             }
 
@@ -133,7 +138,7 @@ fun DashboardScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        MetricsGrid()
+        MetricsGrid(metrics = metrics)
 
         Spacer(Modifier.height(32.dp))
         Spacer(Modifier.height(contentPadding.calculateBottomPadding()))
@@ -178,19 +183,19 @@ private fun FilterChipsRow(
 }
 
 @Composable
-internal fun MetricsGrid() {
+internal fun MetricsGrid(metrics: DashboardMetrics) {
     Column {
         Row(Modifier.fillMaxWidth()) {
             MetricCard(
                 title = "Avg Pace",
-                value = "--:-- /km",
+                value = formatPace(metrics.avgPaceSecPerKM),
                 icon = Icons.Default.Speed,
                 modifier = Modifier.weight(1f)
             )
             Spacer(Modifier.width(16.dp))
             MetricCard(
                 title = "Best Time",
-                value = "--:--",
+                value = metrics.bestTimeSeconds?.let { CommonUtils.getTimeAsString(it) } ?: EMPTY_VALUE,
                 icon = Icons.Default.Timer,
                 modifier = Modifier.weight(1f)
             )
@@ -199,14 +204,14 @@ internal fun MetricsGrid() {
         Row(Modifier.fillMaxWidth()) {
             MetricCard(
                 title = "Weekly Distance",
-                value = "-- km",
+                value = formatKm(metrics.weeklyDistanceMeters),
                 icon = Icons.AutoMirrored.Filled.DirectionsRun,
                 modifier = Modifier.weight(1f)
             )
             Spacer(Modifier.width(16.dp))
             MetricCard(
                 title = "Recent Trend",
-                value = "--",
+                value = formatTrend(metrics.trendPct),
                 icon = Icons.AutoMirrored.Filled.TrendingUp,
                 modifier = Modifier.weight(1f)
             )
@@ -263,4 +268,22 @@ internal fun MetricCard(title: String, value: String, icon: ImageVector, modifie
             )
         }
     }
+}
+
+private fun formatPace(secPerKm: Int?): String {
+    if (secPerKm == null || secPerKm <= 0) return EMPTY_VALUE
+    val mins = secPerKm / SECONDS_PER_MINUTE
+    val secs = secPerKm % SECONDS_PER_MINUTE
+    return String.format(Locale.getDefault(), "%d:%02d /km", mins, secs)
+}
+
+private fun formatKm(meters: Float): String {
+    if (meters <= 0f) return "0.00 km"
+    return String.format(Locale.getDefault(), "%.2f km", meters / METERS_PER_KM)
+}
+
+private fun formatTrend(pct: Float?): String {
+    if (pct == null) return EMPTY_VALUE
+    val sign = if (pct >= 0f) "+" else ""
+    return String.format(Locale.getDefault(), "%s%.0f%%", sign, pct)
 }

@@ -66,4 +66,10 @@ class RunRepositoryImpl @Inject constructor(
             }
         }
     }
+
+    override fun observeRuns(runTypeId: Long?): Flow<List<RunSession>> {
+        return runSessionDao.observeRuns(runTypeId).map { list ->
+            list.map { it.toDomain() }
+        }
+    }
 }

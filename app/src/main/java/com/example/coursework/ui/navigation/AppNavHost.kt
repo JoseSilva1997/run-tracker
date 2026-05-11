@@ -32,6 +32,7 @@ import com.example.coursework.ui.dashboard.DashboardViewModel
 import com.example.coursework.ui.history.HistoryScreen
 import com.example.coursework.ui.liveruns.LiveRunScreen
 import com.example.coursework.domain.model.RunType
+import com.example.coursework.ui.dashboard.FILTER_ALL
 import com.example.coursework.ui.runtypes.AddRunTypeViewModel
 import com.example.coursework.ui.runtypes.DeleteRunTypeEvent
 import com.example.coursework.ui.runtypes.DeleteRunTypeViewModel
@@ -113,11 +114,15 @@ fun AppNavHost() {
                     val vm: DashboardViewModel = hiltViewModel(parentEntry)
                     val addRunTypeVm: AddRunTypeViewModel = hiltViewModel()
                     val rts by vm.runTypes.collectAsState()
-                    val filterOptions = listOf("All") + rts.map { it.name }
+                    val filterOptions = listOf(FILTER_ALL) + rts.map { it.name }
+                    val selectedFilter by vm.dashboardFilter.collectAsState()
+                    val uiState by vm.uiState.collectAsState()
 
                     DashboardScreen(
                         filterOptions = filterOptions,
-                        onFilterSelected = {},
+                        selectedFilter = selectedFilter,
+                        metrics = uiState.metrics,
+                        onFilterSelected = vm::onDashboardFilterSelected,
                         onAddNewRunType = { name, distance ->
                             addRunTypeVm.addRunType(name, distance)
                         },

@@ -28,4 +28,7 @@ interface RunSessionDao {
 
     @Query("DELETE FROM run_sessions WHERE runId = :runId")
     suspend fun deleteRunSession(runId: Long)
+
+    @Query("SELECT * FROM run_sessions WHERE (:runTypeId IS NULL OR runTypeId = :runTypeId) ORDER BY timestamp DESC")
+    fun observeRuns(runTypeId: Long?): Flow<List<RunSessionEntity>>
 }
