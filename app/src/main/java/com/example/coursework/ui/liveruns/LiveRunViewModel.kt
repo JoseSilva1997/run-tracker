@@ -11,6 +11,7 @@ import com.example.coursework.domain.repository.RunRepository
 import com.example.coursework.domain.repository.RunTypeRepository
 import com.example.coursework.domain.repository.WeatherRepository
 import com.example.coursework.util.textToSpeech.TtsHolder
+import com.example.coursework.util.vibration.VibratorHolder
 import com.google.android.gms.maps.model.LatLng
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -89,6 +90,7 @@ class LiveRunViewModel @Inject constructor(
     private val runRepository: RunRepository,
     private val weatherRepository: WeatherRepository,
     private val runTypeRepository: RunTypeRepository,
+    private val vibrator: VibratorHolder,
     val tts: TtsHolder,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -290,6 +292,12 @@ class LiveRunViewModel @Inject constructor(
         _uiState.update { it.copy(isTracking = false, isPaused = false) }
         locationJob?.cancel()
         timerJob?.cancel()
+
+        vibrator.pattern(
+            timings = longArrayOf(0, 300, 150, 300, 150, 600),
+            amplitudes = intArrayOf(0, 255, 0, 255, 0, 255)
+        )
+        if (tts.ready.value) tts.speak("Run complete. Great job!")
 
         viewModelScope.launch {
             // Give an in-flight weather fetch a moment to finish so short
