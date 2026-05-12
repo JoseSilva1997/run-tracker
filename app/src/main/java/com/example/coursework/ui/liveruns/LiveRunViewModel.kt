@@ -300,9 +300,9 @@ class LiveRunViewModel @Inject constructor(
         if (tts.ready.value) tts.speak("Run complete. Great job!")
 
         viewModelScope.launch {
-            // Give an in-flight weather fetch a moment to finish so short
-            // runs still get a snapshot. Falls through after the timeout
-            // and saves with whatever weatherSnapshot currently holds.
+            // The weather fetch was started asynchronously at the beginning of the run.
+            // Before saving to the database, we give that existing background job a few
+            // seconds to finish so we don't save a null snapshot on very short runs.
             weatherJob?.let { job ->
                 withTimeoutOrNull(WEATHER_WAIT_MS) { job.join() }
             }

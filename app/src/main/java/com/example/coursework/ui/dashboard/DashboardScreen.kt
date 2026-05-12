@@ -45,6 +45,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -89,6 +95,7 @@ fun DashboardScreen(
     ) {
         Spacer(Modifier.height(24.dp))
 
+        // Title
         Text(
             text = "Dashboard",
             color = TextPrimary,
@@ -96,20 +103,20 @@ fun DashboardScreen(
             fontWeight = FontWeight.ExtraBold
         )
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(8.dp))
 
+        // Run type chips + add button
         Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.Bottom,
-            horizontalArrangement = Arrangement.SpaceBetween
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Column {
-                FilterChipsRow(
-                    options = filterOptions,
-                    selectedFilter = selectedFilter,
-                    onSelected = onFilterSelected
-                )
-            }
+            FilterChipsRow(
+                options = filterOptions,
+                selectedFilter = selectedFilter,
+                onSelected = onFilterSelected,
+                modifier = Modifier.weight(1f)
+            )
 
             FilledIconButton(
                 onClick = { showAddRunTypeSheet = true },
@@ -128,7 +135,7 @@ fun DashboardScreen(
         }
 
         Spacer(Modifier.height(16.dp))
-
+        
         Text(
             text = "Your Progress",
             color = TextPrimary,
@@ -138,6 +145,7 @@ fun DashboardScreen(
 
         Spacer(Modifier.height(16.dp))
 
+        // Metrics
         MetricsGrid(metrics = metrics)
 
         Spacer(Modifier.height(32.dp))
@@ -156,11 +164,25 @@ fun DashboardScreen(
 private fun FilterChipsRow(
     options: List<String>,
     selectedFilter: String,
-    onSelected: (String) -> Unit
+    onSelected: (String) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
-        modifier = Modifier.fillMaxWidth(0.8f)
+        modifier = modifier
+            // Fade border opacity so chips slowly fade behind add button
+            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+            .drawWithContent {
+                drawContent()
+                drawRect(
+                    brush = Brush.horizontalGradient(
+                        0f to Color.Black,
+                        0.85f to Color.Black,
+                        1f to Color.Transparent
+                    ),
+                    blendMode = BlendMode.DstIn
+                )
+            }
     ) {
         items(options) { option ->
             FilterChip(
@@ -210,7 +232,7 @@ internal fun MetricsGrid(metrics: DashboardMetrics) {
             )
             Spacer(Modifier.width(16.dp))
             MetricCard(
-                title = "Recent Trend",
+                title = "Weekly Trend",
                 value = formatTrend(metrics.trendPct),
                 icon = Icons.AutoMirrored.Filled.TrendingUp,
                 modifier = Modifier.weight(1f)
