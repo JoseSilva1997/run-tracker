@@ -39,7 +39,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -67,6 +66,8 @@ private val WEATHER_ACCENT = BtnPrimaryBlue        // Blue for weather card.
 private val RUN_TYPE_ACCENT = Color(0xFFFFA500)    // Orange banner for run-type header.
 private const val MAP_HEIGHT_DP = 240
 
+// Run summary shown right after a Live Run finishes (and from the History list). Loads
+// the saved run via its id, shows route + stats + weather, and offers Done/Delete.
 @Composable
 fun SummaryScreen(
     onDone: () -> Unit,
@@ -75,6 +76,9 @@ fun SummaryScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showDeleteDialog by remember { mutableStateOf(false) }
 
+    // Wait for the VM to confirm the delete actually committed before leaving the screen,
+    // otherwise we'd navigate away while the DB write is still in flight and the run
+    // could briefly reappear on History.
     LaunchedEffect(Unit) {
         viewModel.runDeletedEvent.collect { onDone() }
     }
@@ -129,6 +133,8 @@ fun SummaryScreen(
     }
 }
 
+// Body of the summary once the run has loaded. Extracted so the loading/error states
+// in the parent stay readable.
 @Composable
 private fun SummaryContent(
     runSession: RunSession,
@@ -136,6 +142,8 @@ private fun SummaryContent(
     targetDistanceMeters: Float,
     pathPoints: List<LatLng>
 ) {
+    // Guard against target == 0f so a run pointing at a hard-deleted run type doesn't
+    // wrongly show the "Done!" badge.
     val isCompleted = targetDistanceMeters > 0f &&
             runSession.totalDistanceMeters >= targetDistanceMeters
 
@@ -145,8 +153,8 @@ private fun SummaryContent(
     WeatherCard(weather = runSession.weatherSnapshot)
 }
 
-// Run type header. Icon + name, no background - keeps the top of the
-// screen quiet so the map and stat cards carry the visual weight.
+// Run type header. Icon + name, no background, so the top of the screen stays quiet
+// and the map and stat cards carry the visual weight.
 @Composable
 private fun RunTypeBanner(name: String, showDoneBadge: Boolean
 ) {
@@ -174,6 +182,8 @@ private fun RunTypeBanner(name: String, showDoneBadge: Boolean
     }
 }
 
+// Fixed-height route map at the top of the summary. Wrapped in a Card so the rounded
+// corners match the stat cards below.
 @Composable
 private fun RouteMap(pathPoints: List<LatLng>) {
     Card(
@@ -190,6 +200,7 @@ private fun RouteMap(pathPoints: List<LatLng>) {
     }
 }
 
+// Training stats card: total time and average pace.
 @Composable
 private fun TrainingDataCard(runSession: RunSession) {
     StatsCard(
@@ -211,6 +222,8 @@ private fun TrainingDataCard(runSession: RunSession) {
     }
 }
 
+// Weather snapshot taken at run start. Snapshot is nullable because the run is allowed
+// to save with no weather when the device is offline or the API call fails.
 @Composable
 private fun WeatherCard(weather: WeatherSnapshot?) {
     StatsCard(
@@ -243,8 +256,9 @@ private fun WeatherCard(weather: WeatherSnapshot?) {
     }
 }
 
-// Generic dark card with a colored accent header (icon + title + thin
-// underline bar). Caller picks the accent so each card reads distinctly.
+// Generic dark card with a coloured accent header (icon + title + thin underline bar).
+// Caller picks the accent so each card on the screen reads distinctly without
+// duplicating the styling.
 @Composable
 private fun StatsCard(
     title: String,
@@ -288,6 +302,8 @@ private fun StatsCard(
     }
 }
 
+// Confirmation dialog for deleting the run. Kept as its own composable so the screen's
+// main layout doesn't carry the dialog's body inline.
 @Composable
 private fun DeleteRunDialog(
     onConfirm: () -> Unit,
@@ -318,6 +334,7 @@ private fun DeleteRunDialog(
     )
 }
 
+// Label on the left, value on the right. Used inside the stat cards.
 @Composable
 private fun StatRow(label: String, value: String) {
     Row(

@@ -9,13 +9,17 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
-
-private const val DEFAULT_DURATION_MS = 400L
-
+/**
+ * Shared wrapper around the system vibrator. @Singleton because there's
+ * only one vibrator on the device and every caller should be talking to the same handle.
+ */
 @Singleton
 class VibratorHolder @Inject constructor(
     @ApplicationContext private val context: Context
 ){
+    // Resolved lazily and via the right API for the device's Android version
+    // VibratorManager is the modern way (API 31+)
+    // The older VIBRATOR_SERVICE path is kept as a fallback for pre-S devices.
     private val vibrator: Vibrator? by lazy {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val manager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
@@ -26,12 +30,8 @@ class VibratorHolder @Inject constructor(
         }
     }
 
-    fun vibrate(durationMs: Long = DEFAULT_DURATION_MS ) {
-        val v = vibrator ?: return
-        if (!v.hasVibrator()) return
-        v.vibrate(VibrationEffect.createOneShot(durationMs, VibrationEffect.DEFAULT_AMPLITUDE))
-    }
-
+    // Plays a custom vibration waveform. Bails out silently if the device has no vibrator hardware,
+    // so callers don't need to guard each call site themselves. The -1 repeat index means play once and stop.
     fun pattern(timings: LongArray, amplitudes: IntArray) {
         val v = vibrator ?: return
         if (!v.hasVibrator()) return

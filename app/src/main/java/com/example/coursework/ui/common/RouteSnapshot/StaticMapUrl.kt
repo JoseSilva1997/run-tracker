@@ -5,12 +5,17 @@ import com.google.maps.android.PolyUtil
 import java.net.URLEncoder
 
 private const val STATIC_MAP_BASE =  "https://maps.googleapis.com/maps/api/staticmap"
-private const val MAP_SCALE = 2     // retina; 1 px asset = 2 device px
+// Asks the server for a higher-resolution image so the snapshot stays sharp on dense (retina-class) screens.
+private const val MAP_SCALE = 2
 private const val PATH_WEIGHT = 4   // line thickness in static map px
 private const val PATH_COLOR = "0x0000ff" // ARGB hex, blue opaque
 private const val MAX_URL_LENGTH = 16384 // Google hard limit
 private const val MAX_DIMENSION_PX = 640 // free tier cap
 
+/**
+ * Builds a Google Static Maps URL for the given route. Returns null if the route is empty or can't
+ * be made to fit Google's URL length cap.
+ */
 fun buildStaticMapUrl (
     pathPoints: List<LatLng>,
     widthPx: Int,
@@ -21,6 +26,9 @@ fun buildStaticMapUrl (
 
     val w = widthPx.coerceIn(1, MAX_DIMENSION_PX)
     val h = heightPx.coerceIn(1, MAX_DIMENSION_PX)
+    // Polyline encoding compresses the lat/lng pairs into a short URL-safe string, far shorter than
+    // spelling out lat,lng|lat,lng|.... This is what keeps the URL under the length limit for runs
+    // with hundreds of points.
     val encoded = PolyUtil.encode(pathPoints)
 
     val pathParam = "color:$PATH_COLOR|weight:$PATH_WEIGHT|enc:$encoded"
@@ -28,6 +36,8 @@ fun buildStaticMapUrl (
         append(STATIC_MAP_BASE)
         append("?size=").append(w).append("x").append(h)
         append("&scale=").append(MAP_SCALE)
+        // URL-encoded after the parameter is built because the | separators (and the : inside color: /
+        // weight: / enc:) have to be escaped once they sit inside a query string.
         append("&path=").append(URLEncoder.encode(pathParam, "utf-8"))
         append("&key=").append(apiKey)
     }

@@ -4,6 +4,7 @@ import com.example.coursework.domain.model.RunPoint
 import com.example.coursework.domain.model.RunSession
 import kotlinx.coroutines.flow.Flow
 
+// Read/write access to saved runs and their GPS points.
 interface RunRepository {
     suspend fun saveRun(runSession: RunSession, points: List<RunPoint>): Long
     suspend fun getRunDetails(runId: Long): Pair<RunSession, List<RunPoint>>

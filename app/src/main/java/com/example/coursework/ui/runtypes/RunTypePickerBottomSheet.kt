@@ -32,6 +32,9 @@ import com.example.coursework.domain.model.RunType
 import com.example.coursework.ui.theme.TextPrimary
 import com.example.coursework.ui.theme.TextSecondary
 
+// Bottom sheet shown when the user taps "Start Run". Lists the active run types with a
+// radio for the current selection, plus a delete action per row and a button to create
+// a new type. All state and side effects are hoisted to the shell.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RunTypePickerBottomSheet(
@@ -68,6 +71,9 @@ fun RunTypePickerBottomSheet(
                     ListItem(
                         headlineContent = { Text(option.name) },
                         leadingContent = {
+                            // onClick = null because the whole row is already clickable;
+                            // letting the radio handle clicks too would double-fire and
+                            // also widen the touch target outside the visible row.
                             RadioButton(
                                 selected = option.name == selectedRunTypeName,
                                 onClick = null

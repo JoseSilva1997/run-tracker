@@ -12,8 +12,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
+// Small status badges shown on run cards and the summary screen. Only the "Done!" badge
+// exists today, but kept as its own file so future statuses (e.g. partial, personal best)
+// can be added alongside without inflating the call sites.
+
 private val DoneGreen = Color(0xFF2ECC71)
 
+// Green pill shown next to a run that reached its target distance. Visual shorthand
+// so the user can scan history at a glance without reading the numbers.
 @Composable
 fun DoneBadge(modifier: Modifier = Modifier) {
     Box(

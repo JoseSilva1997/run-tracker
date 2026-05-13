@@ -13,10 +13,15 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
+// Hilt module for the Room database and its DAOs. @Provides is used because Room
+// generates the database implementation, so Hilt needs explicit factory functions.
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
 
+    // Builds the single AppDatabase instance for the app. Registered migrations are
+    // listed here so Room can step an existing user's DB up to the current schema
+    // version instead of wiping it.
     @Provides
     @Singleton
     fun provideAppDatabase(
@@ -31,12 +36,13 @@ object DatabaseModule {
             .build()
     }
 
+    // DAOs are not @Singleton because Room already returns the same instance from the
+    // database object, so adding the scope here would just be redundant.
     @Provides
     fun provideRunTypeDao(database: AppDatabase): RunTypeDao {
         return database.runTypeDao()
     }
 
-    // Exposes the new RunSessionDao
     @Provides
     fun provideRunSessionDao(database: AppDatabase): RunSessionDao {
         return database.runSessionDao()

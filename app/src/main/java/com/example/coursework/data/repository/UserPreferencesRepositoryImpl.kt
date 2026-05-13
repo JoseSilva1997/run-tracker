@@ -12,6 +12,9 @@ import kotlinx.coroutines.flow.map
 import java.io.IOException
 import javax.inject.Inject
 
+/**
+ * Persists small user preferences in DataStore.
+ */
 class UserPreferencesRepositoryImpl @Inject constructor(
     private val dataStore: DataStore<Preferences>
 ) : UserPreferencesRepository {
@@ -19,8 +22,12 @@ class UserPreferencesRepositoryImpl @Inject constructor(
     private object PreferencesKeys {
         val LAST_SELECTED_RUN_TYPE = stringPreferencesKey("last_selected_run_type")
     }
-
+    // Exposed as a Flow so the UI re-renders automatically whenever the saved value changes,
+    // instead of needing a manual re-read.
     override val lastSelectedRunTypeName: Flow<String?> = dataStore.data
+        // Only IOException is swallowed — that's a real disk read failure, recoverable by falling back to
+        // empty preferences. Anything else is a programming bug and is rethrown so it surfaces during
+        // development instead of being hidden.
         .catch { exception ->
             if (exception is IOException) {
                 emit(emptyPreferences())

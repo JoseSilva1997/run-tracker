@@ -68,6 +68,8 @@ private const val SECONDS_PER_MINUTE = 60
 private const val METERS_PER_KM = 1000f
 private const val EMPTY_VALUE = "--"
 
+// Stateless dashboard screen. State and callbacks are hoisted to the parent so this
+// composable stays easy to preview and isolate in tests.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
@@ -80,6 +82,9 @@ fun DashboardScreen(
 ) {
     var showAddRunTypeSheet by remember { mutableStateOf(false) }
 
+    // Snap the selection back to a valid option if the currently selected run type
+    // gets archived or deleted while the screen is open, otherwise the chip row
+    // would show no selection and metrics would freeze on a missing filter.
     LaunchedEffect(filterOptions, selectedFilter) {
         if (selectedFilter !in filterOptions) {
             filterOptions.firstOrNull()?.let(onFilterSelected)
@@ -160,6 +165,8 @@ fun DashboardScreen(
     }
 }
 
+// Horizontally scrollable row of run-type filter chips. Uses a LazyRow rather than a
+// Row so the list can grow past the screen width once the user adds more run types.
 @Composable
 private fun FilterChipsRow(
     options: List<String>,
@@ -170,7 +177,9 @@ private fun FilterChipsRow(
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         modifier = modifier
-            // Fade border opacity so chips slowly fade behind add button
+            // Offscreen compositing plus a DstIn gradient fades the trailing edge of the
+            // row out, so scrolling chips appear to slide behind the add button instead
+            // of being abruptly clipped.
             .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
             .drawWithContent {
                 drawContent()
@@ -204,6 +213,8 @@ private fun FilterChipsRow(
     }
 }
 
+// 2x2 grid of metric cards. Pulled out as its own composable so the dashboard's main
+// layout reads top-to-bottom without nested Row/Column noise.
 @Composable
 internal fun MetricsGrid(metrics: DashboardMetrics) {
     Column {
@@ -241,6 +252,8 @@ internal fun MetricsGrid(metrics: DashboardMetrics) {
     }
 }
 
+// Single metric tile: tinted icon, label, value. Shared shape so the four cards in the
+// grid stay visually consistent without each call site repeating the styling.
 @Composable
 internal fun MetricCard(title: String, value: String, icon: ImageVector, modifier: Modifier = Modifier) {
     Card(
@@ -292,6 +305,8 @@ internal fun MetricCard(title: String, value: String, icon: ImageVector, modifie
     }
 }
 
+// Formats pace as "M:SS /km". Falls back to the empty placeholder when there isn't
+// enough data, so a fresh user doesn't see a misleading "0:00 /km".
 private fun formatPace(secPerKm: Int?): String {
     if (secPerKm == null || secPerKm <= 0) return EMPTY_VALUE
     val mins = secPerKm / SECONDS_PER_MINUTE
@@ -299,11 +314,14 @@ private fun formatPace(secPerKm: Int?): String {
     return String.format(Locale.getDefault(), "%d:%02d /km", mins, secs)
 }
 
+// Formats a metres value as a kilometre string with two decimal places.
 private fun formatKm(meters: Float): String {
     if (meters <= 0f) return "0.00 km"
     return String.format(Locale.getDefault(), "%.2f km", meters / METERS_PER_KM)
 }
 
+// Formats a percentage trend with an explicit sign. The leading "+" is added by hand
+// because String.format only emits one for negative values.
 private fun formatTrend(pct: Float?): String {
     if (pct == null) return EMPTY_VALUE
     val sign = if (pct >= 0f) "+" else ""

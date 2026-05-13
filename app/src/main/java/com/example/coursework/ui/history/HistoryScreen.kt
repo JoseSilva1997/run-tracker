@@ -47,6 +47,9 @@ import java.util.Locale
 private val CARD_BG = Color(0xFF1E1E1E)
 private const val CARD_HEIGHT_DP = 140
 
+// Lists past runs as cards. The screen owns no run-fetching logic itself, the ViewModel
+// streams already-joined HistoryItems (session + run type + path points) so the card
+// composable doesn't have to look anything up.
 @Composable
 fun HistoryScreen(
     contentPadding: PaddingValues,
@@ -85,6 +88,8 @@ fun HistoryScreen(
                 }
             }
             else -> {
+                // Keyed by session id so reordering or inserting a new run doesn't
+                // recompose every card, only the ones whose position actually changed.
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(bottom = contentPadding.calculateBottomPadding()),
@@ -99,11 +104,15 @@ fun HistoryScreen(
     }
 }
 
+// Single row in the history list: date, run type, key stats, and a small route preview.
 @Composable
 private fun RunHistoryCard(
     item: HistoryItem,
     onClick: () -> Unit
 ) {
+    // A run counts as completed only if it actually hit its target distance. The
+    // explicit > 0f guard avoids treating runs against a deleted run type (target 0)
+    // as completed by accident.
     val isCompleted = item.targetDistanceMeters > 0f &&
             item.session.totalDistanceMeters >= item.targetDistanceMeters
 
@@ -161,6 +170,9 @@ private fun RunHistoryCard(
                     )
                 }
             }
+            // Square map preview on the right. The leading edge is faded into the card
+            // background using offscreen compositing plus a DstIn gradient, so the map
+            // appears to blend into the text column instead of having a hard seam.
             Box(
                 modifier = Modifier
                     .fillMaxHeight()
@@ -190,6 +202,7 @@ private fun RunHistoryCard(
 
 
 
+// Formats a run timestamp for the card header.
 private fun formatDate(timestamp: Long): String {
     return SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(Date(timestamp))
 }

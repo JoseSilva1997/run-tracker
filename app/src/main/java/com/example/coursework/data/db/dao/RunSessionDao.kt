@@ -10,6 +10,7 @@ import com.example.coursework.data.db.entity.RunSessionEntity
 import com.example.coursework.data.db.entity.RunSessionWithPoints
 import kotlinx.coroutines.flow.Flow
 
+// Room DAO for the run_sessions table and its related GPS points.
 @Dao
 interface RunSessionDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)

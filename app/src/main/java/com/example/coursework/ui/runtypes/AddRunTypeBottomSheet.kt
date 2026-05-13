@@ -21,9 +21,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 
-private const val MAX_NAME_LENGTH = 8
+// Capped because auto-finish triggers when measured distance reaches the target — an unreachable
+// target would mean a run that never ends.
 private const val MAX_DISTANCE_METERS = 100_000
+private const val MAX_NAME_LENGTH = 8
 
+// Bottom sheet form for creating a new run type.
+// Validates the name and target distance before handing them back via onSave.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddRunTypeBottomSheet (
@@ -118,6 +122,8 @@ fun AddRunTypeBottomSheet (
     }
 }
 
+// Checks the trimmed name is non-empty and within the length cap, reporting any failure through
+// onError.
 private fun isValidName(trimmedName: String, onError: (String?) -> Unit): Boolean {
     return when {
         trimmedName.isEmpty() -> {
@@ -135,6 +141,8 @@ private fun isValidName(trimmedName: String, onError: (String?) -> Unit): Boolea
     }
 }
 
+// Parses and bounds-checks the target distance. Validated as an Int rather than a Float because the
+// UI doesn't accept fractional metres — whole-number targets only.
 private fun isValidDistance(distanceStr: String, onError: (String?) -> Unit): Boolean {
     val distance = distanceStr.toIntOrNull()
     return when {
@@ -146,7 +154,8 @@ private fun isValidDistance(distanceStr: String, onError: (String?) -> Unit): Bo
             onError("Distance must be greater than 0")
             false
         }
-        distance > MAX_DISTANCE_METERS -> { // Cap at 100km for sanity
+        distance > MAX_DISTANCE_METERS -> { // Matches MAX_DISTANCE_METERS so the target is always
+                                            // something a run can actually hit.
             onError("Distance is too large (max ${MAX_DISTANCE_METERS}m)")
             false
         }

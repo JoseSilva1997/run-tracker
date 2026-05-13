@@ -5,12 +5,14 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
+// One row per completed run. Weather is stored inline because there's only ever one
+// snapshot per run, a separate table would just add a join.
 @Entity(
     tableName = "run_sessions",
     foreignKeys = [
         ForeignKey(
             entity = RunTypeEntity::class,
-            parentColumns = ["id"], // Replace "id" with the actual primary key name of RunTypeEntity
+            parentColumns = ["id"],
             childColumns = ["runTypeId"],
             onDelete = ForeignKey.CASCADE
         )
@@ -23,7 +25,7 @@ data class RunSessionEntity(
     val durationSeconds: Long,
     val totalDistanceMeters: Float,
     val timestamp: Long,
-    // Weather fields (nullable because network fetch might fail)
+    // Nullable so the run still saves when the weather API call fails or the device is offline.
     val temperatureC: Double?,
     val conditionText: String?,
     val windSpeed: Double?,

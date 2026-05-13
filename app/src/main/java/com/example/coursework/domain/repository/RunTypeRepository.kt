@@ -3,6 +3,7 @@ package com.example.coursework.domain.repository
 import com.example.coursework.domain.model.RunType
 import kotlinx.coroutines.flow.Flow
 
+// Read/write access to user-defined run types.
 interface RunTypeRepository {
 
     fun observeActive(): Flow<List<RunType>>

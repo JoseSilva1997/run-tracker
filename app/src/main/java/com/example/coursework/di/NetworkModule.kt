@@ -12,12 +12,15 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import javax.inject.Singleton
 
+// Hilt module that wires up the network stack. @Provides rather than @Binds because we
+// don't own Retrofit/OkHttp, so Hilt needs explicit factory functions for them.
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
     const val OPEN_WEATHER_MAP_BASE_URL = "https://api.openweathermap.org/"
 
+    // Builds a single Retrofit instance reused by every API binding below.
     @Provides
     @Singleton
     fun provideRetrofit(): Retrofit {
@@ -43,6 +46,7 @@ object NetworkModule {
             .build()
     }
 
+    // Generates the WeatherApi implementation Retrofit makes from the interface.
     @Provides
     @Singleton
     fun provideWeatherApi(retrofit: Retrofit): WeatherApi {

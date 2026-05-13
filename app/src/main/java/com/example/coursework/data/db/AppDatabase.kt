@@ -14,10 +14,14 @@ import com.example.coursework.data.db.entity.RunTypeEntity
         RunSessionEntity::class,
         RunPointEntity::class
     ],
+    // schema revisions including the baseline
     version = 4,
+    // writes JSON schema snapshots that migrations are verified against at compile time
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
+    // No runPointDao(): points are loaded via RunSessionWithPoints on the session DAO, never
+    // on their own.
     abstract fun runTypeDao(): RunTypeDao
     abstract fun runSessionDao(): RunSessionDao
 }

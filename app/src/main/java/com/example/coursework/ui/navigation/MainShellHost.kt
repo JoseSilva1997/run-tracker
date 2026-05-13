@@ -24,6 +24,9 @@ import com.example.coursework.ui.runtypes.DeleteRunTypeEvent
 import com.example.coursework.ui.runtypes.DeleteRunTypeViewModel
 import com.example.coursework.ui.runtypes.RunTypePickerBottomSheet
 
+// Wraps the navigation host with the persistent chrome (bottom bar, Start Run button)
+// and the dialogs and sheets that need to outlive individual screens, like the run
+// type picker and the delete confirmation.
 @Composable
 fun MainShellHost() {
     val navController = rememberNavController()
@@ -31,10 +34,14 @@ fun MainShellHost() {
     val currentRoute = backStackEntry?.destination?.route
     val isTabRoute = currentRoute == DASHBOARD_ROUTE || currentRoute == HISTORY_ROUTE
 
-    // Resolve once; main graph entry persists across summary/liveRun thanks to saveState.
+    // Wrapped in runCatching because on the very first composition the main graph hasn't
+    // been built yet, and asking for its entry would crash. Returning null until it
+    // exists is fine, the shell just falls back to empty values for one frame.
     val parentEntry: NavBackStackEntry? = remember(backStackEntry) {
         runCatching { navController.getBackStackEntry(MAIN_GRAPH_ROUTE) }.getOrNull()
     }
+    // Deliberately the same instance the Dashboard screen uses. That way the run type the user
+    // picks in the bottom sheet stays in sync with the Dashboard's filter and metrics.
     val sharedVm: DashboardViewModel? = parentEntry?.let { hiltViewModel(it) }
 
     val runTypes by (sharedVm?.runTypes?.collectAsState()
@@ -48,6 +55,8 @@ fun MainShellHost() {
 
     val deleteRunTypeVm: DeleteRunTypeViewModel = hiltViewModel()
     val context = LocalContext.current
+    // The toast is collected here, at the shell level, so the confirmation message still shows up
+    // even if the user closes the picker before the delete finishes.
     LaunchedEffect(Unit) {
         deleteRunTypeVm.events.collect { event ->
             val message = when (event) {
@@ -60,6 +69,8 @@ fun MainShellHost() {
     }
 
     MainShell(
+        // The bottom bar and Start Run button only appear on Dashboard and History.
+        // Live Run and Summary hide them so those screens feel more focused.
         showChrome = isTabRoute,
         currentRoute = currentRoute,
         selectedRunTypeName = selectedRunType,
@@ -67,12 +78,16 @@ fun MainShellHost() {
         onTabSelected = { tab ->
             if (currentRoute == tab.route) return@MainShell
             navController.navigate(tab.route) {
+                // saveState and restoreState keep each tab's scroll position and filters intact when
+                // the user switches between them, and popUpTo stops tab switches from piling up on the back stack.
                 popUpTo(MAIN_GRAPH_ROUTE) { saveState = true }
                 launchSingleTop = true
                 restoreState = true
             }
         },
         onSelectRunType = { showPicker = true },
+        // The shell only knows the name of the selected run type, so we look up the full object here
+        // to grab its id for the Live Run route.
         onStartRun = {
             runTypes.firstOrNull { it.name == selectedRunType }?.let { rt ->
                 navController.navigate(liveRunRoute(rt.id, rt.name))
@@ -116,7 +131,8 @@ fun MainShellHost() {
         )
     }
 
-    // Forward "add run type" request from picker into the dashboard's add sheet flow.
+    // Two-step on purpose: the picker closes first and sets this flag, then the add sheet opens on the
+    // next composition. This stops the two bottom sheets from overlapping during their open/close animations.
     if (pickerRequestAddRunType) {
         val addRunTypeVm: AddRunTypeViewModel = hiltViewModel()
         AddRunTypeBottomSheet(

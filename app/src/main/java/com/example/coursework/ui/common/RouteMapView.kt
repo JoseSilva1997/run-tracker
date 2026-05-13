@@ -38,8 +38,9 @@ import com.google.maps.android.compose.rememberCameraPositionState
 
 private const val DEFAULT_ZOOM = 15f
 private const val ROUTE_LINE_WIDTH = 12f
-private const val BOUNDS_PADDING_PX = 100;
+private const val BOUNDS_PADDING_PX = 100
 
+// Shows a small preview of a run's route; tapping it opens a full-screen interactive map.
 @Composable
 fun RouteMapView(
     pathPoints: List<LatLng>,
@@ -64,6 +65,7 @@ fun RouteMapView(
 
 }
 
+// Hosts the interactive map inside a full-screen dialog with a close button overlaid on top.
 @Composable
 private fun FullScreenRouteMap(
     pathPoints: List<LatLng>,
@@ -101,13 +103,15 @@ private fun FullScreenRouteMap(
     }
 }
 
+// Renders the route as a polyline on Google Maps with the camera framed around it.
 @Composable
 private fun InteractiveRouteMap(
     pathPoints: List<LatLng>,
     modifier: Modifier = Modifier
 ) {
 
-    // Seed initial camera position to the first point of the route to improve loading speed
+    // Seeded once to the first route point so the map opens already centred on the run instead of
+    // snapping into place after layout.
     val cameraPositionState = rememberCameraPositionState {
         pathPoints.firstOrNull()?.let {
             position = CameraPosition.fromLatLngZoom(it, DEFAULT_ZOOM)
@@ -138,11 +142,15 @@ private fun InteractiveRouteMap(
             GoogleMap(
                 modifier = Modifier.fillMaxSize(),
                 cameraPositionState = cameraPositionState,
+                // Buildings, indoor, and traffic layers are turned off — visual noise that's
+                // irrelevant to a running route.
                 properties = MapProperties(
                     isBuildingEnabled = false,
                     isIndoorEnabled = false,
                     isTrafficEnabled = false,
                 ),
+                // Most map controls are disabled to keep the route itself the focus.
+                // Pinch-zoom and drag still work, which is all the user needs to inspect it.
                 uiSettings = MapUiSettings(
                     zoomControlsEnabled = false,
                     mapToolbarEnabled = false,

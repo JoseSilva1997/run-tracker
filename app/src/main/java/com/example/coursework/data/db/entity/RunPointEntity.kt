@@ -5,6 +5,7 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
+// One GPS sample belonging to a run. Cascade-deleted when its parent run is removed.
 @Entity(
     tableName = "run_points",
     foreignKeys = [

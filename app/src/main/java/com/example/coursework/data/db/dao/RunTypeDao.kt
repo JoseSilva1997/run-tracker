@@ -7,6 +7,7 @@ import androidx.room.Query
 import com.example.coursework.data.db.entity.RunTypeEntity
 import kotlinx.coroutines.flow.Flow
 
+// Room DAO for the run_type table.
 @Dao
 interface RunTypeDao {
 

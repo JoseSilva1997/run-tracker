@@ -14,33 +14,43 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
-// Hilt module that maps repository interfaces to their concrete implementations.
-// This keeps ViewModels dependent on abstractions, not concrete classes.
+/**
+ * Tells Hilt how to satisfy requests for repository interfaces by mapping each one to its
+ * concrete implementation. ViewModels then depend only on the interfaces in the domain layer and
+ * never reach for the data layer directly, which keeps the architecture testable and lets
+ * implementations be swapped out without touching the rest of the app.
+ *
+ * The class is abstract because @Binds methods have no body — Hilt generates the wiring at
+ * compile time, so there's nothing for us to implement.
+ *
+ * @InstallIn(SingletonComponent::class) attaches these bindings to the application-wide component,
+ * meaning they exist for as long as the app process is alive rather than being tied to a single
+ * Activity or screen.
+ */
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class RepositoryModule {
 
+    // @Binds is preferred over @Provides here because we're just telling Hilt "when something asks
+    // for this interface, hand it that implementation." There's no construction logic to write —
+    // the implementation's own @Inject constructor already tells Hilt how to build it,
+    // so @Binds is the lighter option and generates less code than a @Provides method would.
+    //
+    // @Singleton means Hilt creates a single instance per app process and reuses it everywhere it's injected.
+    // We want every ViewModel talking to the same instance rather than each getting its own copy.
     @Binds
     @Singleton
-    abstract fun bindRunTypeRepository(
-        impl: RunTypeRepositoryImpl
-    ): RunTypeRepository
+    abstract fun bindRunTypeRepository(impl: RunTypeRepositoryImpl): RunTypeRepository
 
     @Binds
     @Singleton
-    abstract fun bindUserPreferencesRepository(
-        impl: UserPreferencesRepositoryImpl
-    ): UserPreferencesRepository
+    abstract fun bindUserPreferencesRepository(impl: UserPreferencesRepositoryImpl): UserPreferencesRepository
 
     @Binds
     @Singleton
-    abstract fun bindRunRepository(
-        impl: RunRepositoryImpl
-    ): RunRepository
+    abstract fun bindRunRepository(impl: RunRepositoryImpl): RunRepository
 
     @Binds
     @Singleton
-    abstract fun bindWeatherRepository(
-        impl: WeatherRepositoryImpl
-    ): WeatherRepository
+    abstract fun bindWeatherRepository(impl: WeatherRepositoryImpl): WeatherRepository
 }

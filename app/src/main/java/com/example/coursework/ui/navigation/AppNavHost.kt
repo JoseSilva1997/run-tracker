@@ -26,6 +26,11 @@ import com.example.coursework.ui.runtypes.AddRunTypeViewModel
 import com.example.coursework.ui.summary.SummaryScreen
 import com.example.coursework.ui.theme.BgDark
 
+/**
+ * The navigation map of the whole app, kept in one place so the screen flow
+ * is easy to follow. The navController and shell padding are passed in rather
+ * than created here, since the shell around this host is what actually owns them.
+ */
 @Composable
 fun AppNavHost(
     navController: NavHostController,
@@ -39,11 +44,18 @@ fun AppNavHost(
             .padding(top = 16.dp)
             .safeDrawingPadding()
     ) {
+        // Dashboard and History live inside one "main" graph so that jumping
+        // out to a Live Run or Summary and coming back remembers which tab the
+        // user was on, along with its scroll position and filter.
         navigation(route = MAIN_GRAPH_ROUTE, startDestination = DASHBOARD_ROUTE) {
             composable(DASHBOARD_ROUTE) {
                 val parentEntry = remember(it) { navController.getBackStackEntry(MAIN_GRAPH_ROUTE) }
                 val vm: DashboardViewModel = hiltViewModel(parentEntry)
+
+                // Adding a run type is a one-off action, so its ViewModel is
+                // scoped only to this screen and not shared.
                 val addRunTypeVm: AddRunTypeViewModel = hiltViewModel()
+
                 val rts by vm.runTypes.collectAsState()
                 val filterOptions = listOf(FILTER_ALL) + rts.map { it.name }
                 val selectedFilter by vm.dashboardFilter.collectAsState()
@@ -68,6 +80,9 @@ fun AppNavHost(
             }
         }
 
+        // Live Run gets both the id and the name of the run type. The id is what
+        // the screen actually works with, but passing the name too lets the title
+        // show up instantly without waiting on a database lookup.
         composable(
             route = LIVE_RUN_ROUTE,
             arguments = listOf(
@@ -80,6 +95,9 @@ fun AppNavHost(
                 runTypeName = runTypeName,
                 onClose = { navController.popBackStack() },
                 onRunFinished = { runId ->
+                    // The Live Run is popped off as we move to the Summary so
+                    // that pressing Back from the Summary doesn't return the
+                    // user into a run they've already finished.
                     navController.navigate(summaryRoute(runId)) {
                         popUpTo(LIVE_RUN_ROUTE) { inclusive = true }
                     }
